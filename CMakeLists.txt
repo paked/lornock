@@ -1,36 +1,18 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(basin)
+project(lornock)
 
 include_directories(src)
 
 # Put source files in this glob
 file(GLOB SOURCES
     src/main.cpp
-
-    # Gameplay things
-    src/menu.cpp
-    src/fake_panel.cpp
-    src/computer_room_wall.cpp
-    src/computer.cpp
-    src/floorboard.cpp
-    src/battery.cpp
-    src/boulder.cpp
-    src/blockade.cpp
     src/game.cpp
-    src/info.cpp
-    src/player.cpp
-    src/enemy.cpp
-    src/collectable.cpp
-    src/sliding_door.cpp
-    src/switchboard.cpp
-    src/jumper.cpp
-    src/torch.cpp
-    src/boss.cpp
 
     # Entity system things
     src/e/entity.cpp
     src/e/group.cpp
     src/e/component.cpp
+    src/e/scene.cpp
 
     # Engine utils
     src/e/math_util.cpp
@@ -50,10 +32,10 @@ file(GLOB SOURCES
     src/e/rect.cpp
     src/e/text.cpp)
 
-add_executable(game ${SOURCES})
+add_executable(lornock ${SOURCES})
 
 # Copy over assets
-add_custom_command(TARGET game PRE_BUILD
+add_custom_command(TARGET lornock PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
     "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
     COMMENT "copying over assets"
@@ -74,7 +56,7 @@ if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
 						${SDL2_IMAGE_INCLUDE_DIR}
 						${SDL2_TTF_INCLUDE_DIR})
                     message("sdl2 library: " ${SDL2_LIBRARY})
-	target_link_libraries(game ${SDL2_LIBRARY}
+	target_link_libraries(lornock ${SDL2_LIBRARY}
 						 ${SDL2_IMAGE_LIBRARIES}
 						 ${SDL2_TTF_LIBRARIES})
 elseif(EMSCRIPTEN)
