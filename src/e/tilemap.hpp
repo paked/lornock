@@ -10,12 +10,17 @@
 #include <e/group.hpp>
 
 struct Tilemap {
-  Tilemap(Spritesheet* ts);
+  Tilemap(Spritesheet* ts, float x, float y);
 
   int loadLayer(std::string fname, float depth);
+  int loadLayer(Tilelayer::Data data, float depth);
+
   void loadCollisionLayer(std::string fname);
 
   void addToGroup(Group<Entity> *g);
+
+  float x;
+  float y;
 
   Spritesheet* tileset;
   std::vector<Tilelayer*> layers;

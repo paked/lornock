@@ -5,12 +5,16 @@
 
 #include <config.hpp>
 
-Tilemap::Tilemap(Spritesheet *ts) : tileset(ts) {};
+Tilemap::Tilemap(Spritesheet *ts, float x, float y) : tileset(ts), x(x), y(y) {};
 
 int Tilemap::loadLayer(std::string fname, float depth) {
   CSV csv(LVL_PATH + fname);
 
-  Tilelayer* layer = new Tilelayer(tileset, csv.getDataInt(), depth);
+  return loadLayer(csv.getDataInt(), depth);
+}
+
+int Tilemap::loadLayer(Tilelayer::Data d, float depth) {
+  Tilelayer* layer = new Tilelayer(tileset, x, y, d, depth);
   layers.push_back(layer);
 
   return layers.size() - 1;

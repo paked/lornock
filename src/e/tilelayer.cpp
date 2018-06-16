@@ -10,7 +10,7 @@
 #include <e/entity.hpp>
 #include <e/group.hpp>
 
-Tilelayer::Tilelayer(Spritesheet* ts, Data d, float dp) : tileset(ts), data(d) {
+Tilelayer::Tilelayer(Spritesheet* ts, float x, float y, Data d, float dp) : x(x), y(y), tileset(ts), data(d) {
   localDepth = dp;
 }
 
@@ -35,19 +35,19 @@ void Tilelayer::tick(float dt) {
   maxX = MathUtil::clamp(maxX, rowMin, rowMax);
   maxY = MathUtil::clamp(maxY, colMin, colMax);
 
-  for (int y = minY; y < maxY; y++) {
-    auto row = data[y];
+  for (int ty = minY; ty < maxY; ty++) {
+    auto row = data[ty];
 
-    for (int x = minX; x < maxX; x++) {
-      auto tile = row[x];
+    for (int tx = minX; tx < maxX; tx++) {
+      auto tile = row[tx];
 
       if (tile < 0) {
         continue;
       }
 
       Rect dst = {
-        (float) x * tileSize,
-        (float) y * tileSize,
+        (float) x + tx * tileSize,
+        (float) y + ty * tileSize,
         (float) tileSize,
         (float) tileSize
       };

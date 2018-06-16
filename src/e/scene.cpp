@@ -57,6 +57,8 @@ void Scene::update(float dt) {
   }
 
   entities->tick(dt);
+
+  camera->tick(dt);
 }
 
 void Scene::render(SDL_Renderer *r) {

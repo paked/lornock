@@ -16,6 +16,7 @@ Game::Game() : Scene() {}
 bool Game::load() {
   bool ok = Scene::load();
 
+  ok |= Resources::load("tilemap.png");
   ok |= Resources::load("test.png");
 
   return ok;
@@ -24,11 +25,24 @@ bool Game::load() {
 void Game::start() {
   Scene::start();
 
-  Entity* e = new Entity();
-  entities->add(e);
+  player = new Player(camera->getWidth()/2, camera->getHeight()/2);
+  player->sprite->center();
 
-  Sprite* sprite = new Sprite("test.png", camera->getWidth()/2, camera->getHeight()/2);
-  sprite->center();
+  entities->add(player);
 
-  e->reg(sprite);
+  Spritesheet* ts = new Spritesheet("tilemap.png", 16, 16);
+
+  Tilelayer::Data mapData = {
+    { 0,  1,  1,  1,  2  },
+    { 8,  9,  9,  9,  10 },
+    { 8,  9,  9,  9,  10 },
+    { 8,  9,  9,  9,  10 },
+    { 16, 17, 17, 17, 18 },
+  };
+
+  map = new Tilemap(ts, 0, 0);
+  map->loadLayer(mapData, DEPTH_BELOW);
+  map->addToGroup(entities);
+
+  camera->target = Point(5 * 16 / 2, 5 * 16 / 2);
 }

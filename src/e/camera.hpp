@@ -28,7 +28,7 @@ struct Camera {
   // Point to follow if there is no dedicated sprite
   Point target = Point(0, 0);
 
-  float zoom = 4;
+  float zoom = GAME_SCALE;
 
   // Co-ordinate values which take into account shaking
   float x = 0;

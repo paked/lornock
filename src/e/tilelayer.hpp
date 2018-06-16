@@ -6,8 +6,11 @@
 struct Tilelayer : Entity {
   typedef std::vector<std::vector<int>> Data;
 
-  Tilelayer(Spritesheet* ts, Data d, float dp);
+  Tilelayer(Spritesheet* ts, float x, float y, Data d, float dp);
   
+  float x;
+  float y;
+
   Spritesheet* tileset;
   Data data;
 

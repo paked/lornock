@@ -7,6 +7,7 @@ include_directories(src)
 file(GLOB SOURCES
     src/main.cpp
     src/game.cpp
+    src/player.cpp
 
     # Entity system things
     src/e/entity.cpp
