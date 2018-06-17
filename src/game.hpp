@@ -13,6 +13,7 @@ struct Game : Scene {
 
   bool load();
   void start();
+  void tick(float dt);
 
   Player* player;
   Tilemap* map;

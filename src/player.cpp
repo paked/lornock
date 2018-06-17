@@ -1,14 +1,32 @@
 #include <player.hpp>
 
+#include <e/camera.hpp>
+
 Player::Player(float x, float y) {
   sprite = new Sprite("test.png", x, y);
 
   sprite->maxVelocity = maxVelocity;
   sprite->drag = drag;
+
+  tbBGSprite = new Spritesheet("toolbar.png", 16, 16);
+  tbItemSprite = new Spritesheet("toolbar_items.png", 16, 16);
+
+  tbBGLayer = new Tilelayer(tbBGSprite, 0, 0, getTBBGLayerData(tbItemSlots), DEPTH_UI + DEPTH_BELOW);
+  tbItemLayer = new Tilelayer(tbItemSprite, 0, 0, getTBItemLayerData(tbItemSlots), DEPTH_UI);
 }
 
 void Player::start() {
   reg(sprite);
+
+  reg(tbBGLayer);
+  reg(tbItemLayer);
+
+  int tbX = (scene->camera->getWidth() - tbBGLayer->getWidth())/2;
+  int tbY = scene->camera->getHeight() - tbBGLayer->getHeight();
+
+  tbBGLayer->x = tbItemLayer->x = tbX;
+  tbBGLayer->y = tbItemLayer->y = tbY;
+  tbBGLayer->hud = tbItemLayer->hud = true;
 }
 
 void Player::tick(float dt) {
