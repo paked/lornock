@@ -15,9 +15,9 @@ struct Player : Entity {
   Input moveUp = Input(SDL_SCANCODE_W);
   Input moveDown = Input(SDL_SCANCODE_S);
 
-  float acceleration = 15;
-  Point maxVelocity = Point(3, 3);
-  Point drag = Point(0.9995, 0.9995);
+  float acceleration = 8;
+  Point maxVelocity = Point(5, 5);
+  Point drag = Point(0.80, 0.80);
 
   Sprite* sprite;
 };

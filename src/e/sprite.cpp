@@ -52,18 +52,26 @@ void Sprite::tick(float dt) {
   x += nextPositionDelta.x;
   y += nextPositionDelta.y;
 
-  velocity.x += (acceleration.x - drag.x * velocity.x) * dt;
+  velocity.x += (acceleration.x) * dt;
   if (velocity.x > maxVelocity.x) {
     velocity.x = maxVelocity.x;
   } else if (velocity.x < -maxVelocity.x) {
     velocity.x = -maxVelocity.x;
   }
 
-  velocity.y += (acceleration.y - drag.y * velocity.y) * dt;
+  if (acceleration.x == 0) {
+    velocity.x *= drag.x;
+  }
+
+  velocity.y += (acceleration.y) * dt;
   if (velocity.y > maxVelocity.y) {
     velocity.y = maxVelocity.y;
   } else if (velocity.y < -maxVelocity.y) {
     velocity.y = -maxVelocity.y;
+  }
+
+  if (acceleration.y == 0) {
+    velocity.y *= drag.y;
   }
 
   nextPositionDelta.x = velocity.x * dt;
