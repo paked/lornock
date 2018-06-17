@@ -17,23 +17,32 @@ Tilelayer::Tilelayer(Spritesheet* ts, float x, float y, Data d, float dp) : x(x)
 void Tilelayer::tick(float dt) {
   int tileSize = tileset->frameWidth;
 
+  Camera* camera = entity->scene->camera;
+
   int rowMin = 0;
   int rowMax = data[0].size();
 
   int colMin = 0;
   int colMax = data.size();
 
-  int minX = scene->camera->realX / tileSize - 1;
-  int minY = scene->camera->realY / tileSize - 1;
+  int minX = rowMin;
+  int minY = colMin;
+  int maxX = rowMax;
+  int maxY = colMax;
 
-  minX = MathUtil::clamp(minX, rowMin, rowMax);
-  minY = MathUtil::clamp(minY, colMin, colMax);
+  if (!hud) {
+    minX = camera->realX / tileSize - 1;
+    minY = camera->realY / tileSize - 1;
 
-  int maxX = (scene->camera->realX + scene->camera->getWidth()) / tileSize + 1;
-  int maxY = (scene->camera->realY + scene->camera->getHeight()) / tileSize + 1;
+    minX = MathUtil::clamp(minX, rowMin, rowMax);
+    minY = MathUtil::clamp(minY, colMin, colMax);
 
-  maxX = MathUtil::clamp(maxX, rowMin, rowMax);
-  maxY = MathUtil::clamp(maxY, colMin, colMax);
+    maxX = (camera->realX + camera->getWidth()) / tileSize + 1;
+    maxY = (camera->realY + camera->getHeight()) / tileSize + 1;
+
+    maxX = MathUtil::clamp(maxX, rowMin, rowMax);
+    maxY = MathUtil::clamp(maxY, colMin, colMax);
+  }
 
   for (int ty = minY; ty < maxY; ty++) {
     auto row = data[ty];
@@ -52,26 +61,27 @@ void Tilelayer::tick(float dt) {
         (float) tileSize
       };
 
-      /*
-      if (!scene->camera->withinViewport(dst)) {
-        // don't need to render if the thing isn't on screen
-
-        continue;
-      }*/
-
       tileset->frame = tile;
       SDL_Rect src = tileset->getSRC();
 
       unsigned char a = 255 * alpha;
 
       RenderJob j;
-      j.depth = getDepth();
+      j.depth = entity->getDepth() + localDepth;
       j.tex = tileset->texture;
       j.src = src;
-      j.dst = scene->camera->toView(dst);
+      j.dst = camera->toView(dst, hud);
       j.alpha = a;
 
-      scene->renderer->queue.push(j);
+      entity->scene->renderer->queue.push(j);
     }
   }
+}
+
+float Tilelayer::getWidth() {
+  return data[0].size() * tileset->frameWidth;
+}
+
+float Tilelayer::getHeight() {
+  return data.size() * tileset->frameWidth;
 }

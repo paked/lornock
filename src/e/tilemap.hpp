@@ -15,6 +15,7 @@ struct Tilemap {
   int loadLayer(std::string fname, float depth);
   int loadLayer(Tilelayer::Data data, float depth);
 
+  void loadCollisionLayer(Tilelayer::Data data);
   void loadCollisionLayer(std::string fname);
 
   void addToGroup(Group<Entity> *g);
@@ -23,6 +24,8 @@ struct Tilemap {
   float y;
 
   Spritesheet* tileset;
+
+  std::vector<Entity*> layerEntities;
   std::vector<Tilelayer*> layers;
 
   bool canCollide = false;

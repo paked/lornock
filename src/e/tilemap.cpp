@@ -25,11 +25,21 @@ void Tilemap::loadCollisionLayer(std::string fname) {
 
   CSV csv(LVL_PATH + fname);
 
-  collisionData = csv.getDataInt();
+  loadCollisionLayer(csv.getDataInt());
+}
+
+void Tilemap::loadCollisionLayer(Tilelayer::Data data) {
+  canCollide = true;
+
+  collisionData = data;
 }
 
 void Tilemap::addToGroup(Group<Entity> *g) {
   for (auto layer : layers) {
-    g->add(layer);
+    Entity* e = new Entity();
+    g->add(e);
+    e->reg(layer);
+
+    layerEntities.push_back(e);
   }
 }

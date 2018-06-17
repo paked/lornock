@@ -37,3 +37,32 @@ void Player::tick(float dt) {
 
   Entity::tick(dt);
 }
+
+Tilelayer::Data Player::getTBBGLayerData(int slots) {
+  Tilelayer::Data data = { {} };
+
+  for (int i = 0; i < slots; i++) {
+    int t = 1;
+
+    if (i == 0) {
+      printf("0\n");
+      t = 0;
+    } else if (i == slots - 1) {
+      t = 2;
+    }
+
+    data[0].push_back(t);
+  }
+
+  return data;
+}
+
+Tilelayer::Data Player::getTBItemLayerData(int slots) {
+  Tilelayer::Data data = { {} };
+
+  for (int i = 0; i < slots; i++) {
+    data[0].push_back(0);
+  }
+
+  return data;
+}
