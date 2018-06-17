@@ -5,8 +5,7 @@
 #include <e/scene.hpp>
 
 #include <player.hpp>
-#include <e/tilemap.hpp>
-
+#include <asteroid.hpp>
 
 struct Game : Scene {
   Game();
@@ -16,5 +15,5 @@ struct Game : Scene {
   void tick(float dt);
 
   Player* player;
-  Tilemap* map;
+  Asteroid* asteroid;
 };

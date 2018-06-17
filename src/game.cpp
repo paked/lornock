@@ -28,51 +28,45 @@ bool Game::load() {
 void Game::start() {
   Scene::start();
 
-  Spritesheet* ts = new Spritesheet("tilemap.png", 16, 16);
+  // Asteroid
+  asteroid = new Asteroid();
+  entities->add(asteroid);
 
-  Tilelayer::Data mapData = {
-    { -1, -1, -1, -1, -1 },
-    { -1, 0, 0, 0, -1 },
-    { -1, 0, 0, 0, -1 },
-    { -1, 0, 0, 0, -1 },
-    { -1, -1, -1, -1, -1 },
-  };
+  float mapWidth = asteroid->map->layers[0]->getWidth();
+  float mapHeight = asteroid->map->layers[0]->getHeight();
 
-  Tilelayer::Data oreData = {
-    { -1, -1, -1, -1, -1 },
-    { -1, -1, 8, -1, -1 },
-    { -1, -1, -1, -1, -1 },
-    { -1, 8, -1, 9, -1 },
-    { -1, -1, -1, -1, -1 },
-  };
+  Point mapCenter = Point(
+      asteroid->map->x + mapWidth/2,
+      asteroid->map->y + mapHeight/2
+  );
 
-  Tilelayer::Data collisionData = {
-    { 1, 1, 1, 1, 1 },
-    { 1, -1, -1, -1, 1 },
-    { 1, -1, -1, -1, 1 },
-    { 1, -1, -1, -1, 1 },
-    { 1, 1, 1, 1, 1 },
-  };
-
-  map = new Tilemap(ts, 50, 50);
-  int layer = map->loadLayer(mapData, DEPTH_BELOW*2);
-  map->loadLayer(oreData, DEPTH_BELOW);
-  map->loadCollisionLayer(collisionData);
-
-  map->addToGroup(entities);
-
-  float mapWidth = map->layers[layer]->getWidth();
-  float mapHeight = map->layers[layer]->getHeight();
-  Point mapCenter = Point(map->x + mapWidth/2, map->y + mapHeight/2);
-
+  // Player
   player = new Player(mapCenter.x, mapCenter.y);
   player->sprite->center();
-
   entities->add(player);
 
+  // Camera
   camera->target = mapCenter;
 }
 
 void Game::tick(float dt) {
-  Collision::collide(player->sprite, map);
+  Collision::collide(player->sprite, asteroid->map);
+
+  if (player->use.justDown()) {
+    Collision::TileHit th = asteroid->getPickWithinOreSpace(player->sprite);
+
+    if (th.hit) {
+      asteroid->ores[th.y][th.x] = 0;
+
+      for (int i = 0; i < player->tbItemSlots; i++) {
+        if (player->tbItems[i] != 0) {
+          continue;
+        }
+
+        player->tbItems[i] = th.t;
+
+        break;
+      }
+    }
+  }
 }

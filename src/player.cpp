@@ -2,6 +2,8 @@
 
 #include <e/camera.hpp>
 
+#include <item.hpp>
+
 Player::Player(float x, float y) {
   sprite = new Sprite("test.png", x, y);
 
@@ -11,8 +13,13 @@ Player::Player(float x, float y) {
   tbBGSprite = new Spritesheet("toolbar.png", 16, 16);
   tbItemSprite = new Spritesheet("toolbar_items.png", 16, 16);
 
-  tbBGLayer = new Tilelayer(tbBGSprite, 0, 0, getTBBGLayerData(tbItemSlots), DEPTH_UI + DEPTH_BELOW);
-  tbItemLayer = new Tilelayer(tbItemSprite, 0, 0, getTBItemLayerData(tbItemSlots), DEPTH_UI);
+  for (int i = 0; i < tbItemSlots; i++) {
+    tbItems.push_back(0);
+  }
+
+  tbBGLayer = new Tilelayer(tbBGSprite, 0, 0, getTBBGLayerData(), DEPTH_UI + DEPTH_BELOW);
+  tbItemLayer = new Tilelayer(tbItemSprite, 0, 0, getTBItemLayerData(), DEPTH_UI);
+
 }
 
 void Player::start() {
@@ -53,19 +60,20 @@ void Player::tick(float dt) {
   sprite->acceleration.x = acceleration * dir.x;
   sprite->acceleration.y = acceleration * dir.y;
 
+  tbItemLayer->data = getTBItemLayerData();
+
   Entity::tick(dt);
 }
 
-Tilelayer::Data Player::getTBBGLayerData(int slots) {
+Tilelayer::Data Player::getTBBGLayerData() {
   Tilelayer::Data data = { {} };
 
-  for (int i = 0; i < slots; i++) {
+  for (int i = 0; i < tbItemSlots; i++) {
     int t = 1;
 
     if (i == 0) {
-      printf("0\n");
       t = 0;
-    } else if (i == slots - 1) {
+    } else if (i == tbItemSlots - 1) {
       t = 2;
     }
 
@@ -75,11 +83,11 @@ Tilelayer::Data Player::getTBBGLayerData(int slots) {
   return data;
 }
 
-Tilelayer::Data Player::getTBItemLayerData(int slots) {
+Tilelayer::Data Player::getTBItemLayerData() {
   Tilelayer::Data data = { {} };
 
-  for (int i = 0; i < slots; i++) {
-    data[0].push_back(0);
+  for (int i = 0; i < tbItemSlots; i++) {
+    data[0].push_back(Item::items[tbItems[i]].iconIndex);
   }
 
   return data;

@@ -8,6 +8,8 @@ file(GLOB SOURCES
     src/main.cpp
     src/game.cpp
     src/player.cpp
+    src/asteroid.cpp
+    src/item.cpp
 
     # Entity system things
     src/e/entity.cpp

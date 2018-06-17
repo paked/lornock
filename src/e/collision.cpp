@@ -77,17 +77,6 @@ bool Collision::isOverlapping(Sprite* first, Rect second) {
   return isOverlapping(frect, second);
 }
 
-bool Collision::isOverlapping(Sprite* sprite, Tilemap *map, int layer) {
-  int tileSize = map->tileset->frameWidth;
-
-  int x = sprite->x/tileSize;
-  int y = sprite->y/tileSize;
-
-  Tilelayer* l = map->layers[layer];
-
-  return l->data[y][x] > 0;
-}
-
 bool Collision::isOverlapping(Rect first, Rect second) {
   Point amin = { first.x, first.y };
   Point amax = { amin.x + first.w, amin.y + first.h };
@@ -103,6 +92,31 @@ bool Collision::isOverlapping(Rect first, Rect second) {
 bool Collision::isOverlapping(Point p, Rect r) {
   return ((p.x >= r.x) && (p.x <= r.x + r.w)) &&
     ((p.y >= r.y) && (p.y <= r.y + r.h));
+}
+
+bool Collision::isOverlapping(Sprite* sprite, Tilemap *map, int layer) {
+  TileHit th = getTileHit(sprite, map, layer);
+
+  return th.t > 0;
+}
+
+Collision::TileHit Collision::getTileHit(Sprite* sprite, Tilemap* map, int layer) {
+  int tileSize = map->tileset->frameWidth;
+
+  Point c = sprite->getCenter();
+
+  int x = c.x/tileSize;
+  int y = c.y/tileSize;
+
+  Tilelayer* l = map->layers[layer];
+  int t = l->data[y][x];
+
+  return TileHit {
+    t > 0,
+    t,
+    x,
+    y
+  };
 }
 
 bool Collision::intersection(Rect first, Rect second, Rect* out) {

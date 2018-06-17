@@ -5,6 +5,16 @@
 #include <e/point.hpp>
 
 struct Collision {
+  struct TileHit {
+    bool hit;
+
+    int t;
+    int x;
+    int y;
+  };
+
+  static TileHit getTileHit(Sprite* sprite, Tilemap* tilemap, int layer);
+
   static void collide(Sprite* first, Sprite* second);
   static void collide(Sprite* first, Rect second);
   static void collide(Sprite* sprite, Tilemap* tilemap);

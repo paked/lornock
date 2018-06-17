@@ -43,3 +43,9 @@ void Tilemap::addToGroup(Group<Entity> *g) {
     layerEntities.push_back(e);
   }
 }
+
+void Tilemap::addToEntity(Entity* e) {
+  for (auto layer : layers) {
+    e->reg(layer);
+  }
+}
