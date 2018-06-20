@@ -1,0 +1,41 @@
+playerName      paked
+inventory       1 1 1 1 1
+last            9
+
+# A timeline is built out of a:
+# - name: a user defined name for a timeline
+# - id: a unique, engine provided id
+# - actions: a list of every action (in world-time order) which has happened in a timeline (mining, moving, spawning, teleporting)
+#
+# These actions are represented by a set of commands:
+# - `SPAWN position`: for when a player enters a new timline
+# - `MINE position`: for when a player breaks a block
+# - `MOVE position velocity`: for when a player has moved
+# - `JUMP timelineID destinationTime`: for when a player does a time travel
+#
+# Each different command has a `t` value recording the world-time of an action and an `s` value which tracks the order of which an action is in a player's individual timeline (used to differentiate between time-travel versions of you).
+
+===
+
+name            OG Timeline
+id              0
+actions         {
+    SPAWN P p=(1,1) t=0 s=0
+    MOVE P p=(0,0) t=1 s=1
+    MINE P p=(0,0) t=2 s=2
+    MOVE P p=(2,2) t=3 s=3
+    JUMP P TL=1 t=4 dt=100 s=4
+
+    SPAWN P p=(1,1) t= 200 s=9
+}
+
+---
+
+name            A Good Alternative
+id              1
+actions         {
+    SPAWN P p=(2,2) t=100 s=5
+    MOVE P p=(1,1) t=101  s=6
+    MINE P p=(1,1) t=102 s=7
+    JUMP P TL=0 dt=200 s=8
+}

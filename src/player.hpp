@@ -6,6 +6,8 @@
 #include <e/input.hpp>
 #include <e/tilelayer.hpp>
 
+#include <action.hpp>
+
 struct Player : Entity {
   Player(float x, float y);
 
@@ -28,6 +30,7 @@ struct Player : Entity {
   float acceleration = 8;
   Point maxVelocity = Point(5, 5);
   Point drag = Point(0.80, 0.80);
+  Point lastMove;
 
   // Toolbar stuffs
   int tbItemSlots = 5;
@@ -37,4 +40,7 @@ struct Player : Entity {
   Spritesheet* tbItemSprite;
   Tilelayer* tbBGLayer;
   Tilelayer* tbItemLayer;
+
+  bool actionDirty = false;
+  Action action;
 };

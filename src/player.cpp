@@ -1,5 +1,7 @@
 #include <player.hpp>
 
+#include <stdio.h>
+
 #include <e/camera.hpp>
 
 #include <item.hpp>
@@ -19,7 +21,6 @@ Player::Player(float x, float y) {
 
   tbBGLayer = new Tilelayer(tbBGSprite, 0, 0, getTBBGLayerData(), DEPTH_UI + DEPTH_BELOW);
   tbItemLayer = new Tilelayer(tbItemSprite, 0, 0, getTBItemLayerData(), DEPTH_UI);
-
 }
 
 void Player::start() {
@@ -59,6 +60,26 @@ void Player::tick(float dt) {
 
   sprite->acceleration.x = acceleration * dir.x;
   sprite->acceleration.y = acceleration * dir.y;
+
+  // have pretty high tolerance here bc we're dealing with a specific set of possibilities (1, -1, 0, 0.7121*)
+  if (!(fabs(dir.x - lastMove.x) < 0.01 && fabs(dir.y - lastMove.y) < 0.01)) {
+    actionDirty = true;
+    char buffer[512];
+
+    sprintf(buffer,"pos=(%f,%f) vel=(%f,%f) acc=(%f,%f)",
+        sprite->x, sprite->y,
+        sprite->velocity.x, sprite->velocity.y,
+        sprite->acceleration.x, sprite->acceleration.y);
+
+    action = {
+      "MOVE",
+      std::string(buffer)
+    };
+
+    lastMove = dir;
+  } else {
+    printf("no changes\n");
+  }
 
   tbItemLayer->data = getTBItemLayerData();
 

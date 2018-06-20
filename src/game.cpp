@@ -5,12 +5,15 @@
 #include <e/resources.hpp>
 #include <e/collision.hpp>
 
+
 // fwd declaration for Scene
 // TODO: figure out how to do this fwd declaration better
 #include <e/camera.hpp>
 #include <e/renderer.hpp>
 #include <e/entity.hpp>
 #include <e/group.hpp>
+
+#include <past_player.hpp>
 
 Game::Game() : Scene() {}
 
@@ -28,6 +31,13 @@ bool Game::load() {
 void Game::start() {
   Scene::start();
 
+  // Action mgmt
+  actionCollector = new ActionCollector();
+
+  actionCollector->open();
+
+  actionCollector->interval.go();
+
   // Asteroid
   asteroid = new Asteroid();
   entities->add(asteroid);
@@ -44,6 +54,11 @@ void Game::start() {
   player = new Player(mapCenter.x, mapCenter.y);
   player->sprite->center();
   entities->add(player);
+
+  actionCollector->add({
+    "SPAWN",
+    "P pos=(35.0,35.0)"
+  });
 
   // Camera
   camera->target = mapCenter;
@@ -68,5 +83,39 @@ void Game::tick(float dt) {
         break;
       }
     }
+  }
+
+  if (actionCollector->interval.done()) {
+    for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
+      Action a = actionCollector->actions[acUpTo];
+
+      if (a.t > actionCollector->time) {
+        break;
+      }
+
+      if (a.name == "SPAWN") {
+        PastPlayer* pp = new PastPlayer(actionCollector, a);
+
+        entities->add(pp);
+      } else if (a.name == "MOVE") {
+        // We don't handle MOVES here
+      }
+    }
+
+    /*
+    if (player->actionDirty) {
+      actionCollector->add(player->action);
+
+      player->actionDirty = false;
+      actionCollector->sequence++;
+    }*/
+
+    actionCollector->interval.go();
+
+    actionCollector->time++;
+  }
+
+  if (save.justDown()) {
+    actionCollector->save();
   }
 }

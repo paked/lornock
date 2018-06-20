@@ -10,6 +10,8 @@ file(GLOB SOURCES
     src/player.cpp
     src/asteroid.cpp
     src/item.cpp
+    src/action.cpp
+    src/past_player.cpp
 
     # Entity system things
     src/e/entity.cpp
@@ -19,6 +21,10 @@ file(GLOB SOURCES
 
     # Engine utils
     src/e/math_util.cpp
+    src/e/string_util.cpp
+
+    # Engine structs
+    src/e/info_asset.cpp
     src/e/timer.cpp
     src/e/renderer.cpp
     src/e/camera.cpp
