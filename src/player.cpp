@@ -64,21 +64,17 @@ void Player::tick(float dt) {
   // have pretty high tolerance here bc we're dealing with a specific set of possibilities (1, -1, 0, 0.7121*)
   if (!(fabs(dir.x - lastMove.x) < 0.01 && fabs(dir.y - lastMove.y) < 0.01)) {
     actionDirty = true;
-    char buffer[512];
-
-    sprintf(buffer,"pos=(%f,%f) vel=(%f,%f) acc=(%f,%f)",
-        sprite->x, sprite->y,
-        sprite->velocity.x, sprite->velocity.y,
-        sprite->acceleration.x, sprite->acceleration.y);
 
     action = {
       "MOVE",
-      std::string(buffer)
+      {
+        { "pos", "(" + std::to_string(sprite->x) + "," + std::to_string(sprite->y) + ")" },
+        { "vel", "(" + std::to_string(sprite->velocity.x) + "," + std::to_string(sprite->velocity.y) + ")" },
+        { "acc", "(" + std::to_string(sprite->acceleration.x) + "," + std::to_string(sprite->acceleration.y) + ")" },
+      }
     };
 
     lastMove = dir;
-  } else {
-    printf("no changes\n");
   }
 
   tbItemLayer->data = getTBItemLayerData();

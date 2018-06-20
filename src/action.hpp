@@ -2,20 +2,22 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include <e/timer.hpp>
 #include <e/point.hpp>
 
 struct Action {
+  std::string toString();
+
+  int getInt(std::string key);
+  Point getPoint(std::string key);
+
+  int getSequence();
+  int getTime();
+
   std::string name;
-
   std::map<std::string, std::string> params;
-
-  int getInt(std::string n);
-  Point getPoint(std::string n);
-
-  int s;
-  int t;
 };
 
 struct ActionCollector {

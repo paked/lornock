@@ -2,7 +2,7 @@
 
 PastPlayer::PastPlayer(ActionCollector* ac, Action a) : actionCollector(ac) {
   Point pos = a.getPoint("pos");
-  sequence = a.s;
+  sequence = a.getSequence();
 
   sprite = new Sprite("test.png", pos.x, pos.y);
 }
@@ -14,13 +14,13 @@ void PastPlayer::start() {
   sprite->maxVelocity = maxVelocity;
   sprite->drag = drag;
 
+  findNextAction();
+
   reg(sprite);
 }
 
 void PastPlayer::tick(float dt) {
-  Entity::tick(dt);
-
-  if (hasNextAction && actionCollector->time >= nextAction.t) {
+  if (hasNextAction && nextAction.getTime() <= actionCollector->time) {
     Action a = nextAction;
 
     if (nextAction.name == "MOVE") {
@@ -40,8 +40,12 @@ void PastPlayer::tick(float dt) {
       printf("I don't know what the fuck to do with that action!\n");
     }
 
+    sequence = a.getSequence();
+
     findNextAction();
   }
+
+  Entity::tick(dt);
 }
 
 void PastPlayer::findNextAction() {
@@ -50,7 +54,7 @@ void PastPlayer::findNextAction() {
   for (int i = 0; i < actionCollector->actions.size(); i++) {
     Action a = actionCollector->actions[i];
 
-    if (a.s == sequence + 1) {
+    if (a.getSequence() == sequence + 1) {
       nextAction = a;
 
       hasNextAction = true;

@@ -57,7 +57,10 @@ void Game::start() {
 
   actionCollector->add({
     "SPAWN",
-    "P pos=(35.0,35.0)"
+    {
+      { "P", "0" },
+      { "pos", "(35.0,35.0)" },
+    }
   });
 
   // Camera
@@ -89,7 +92,7 @@ void Game::tick(float dt) {
     for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
       Action a = actionCollector->actions[acUpTo];
 
-      if (a.t > actionCollector->time) {
+      if (a.getTime() > actionCollector->time) {
         break;
       }
 
