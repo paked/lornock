@@ -21,4 +21,6 @@ struct PastPlayer : Entity {
   int sequence;
 
   Sprite* sprite;
+
+  Point posBuffer;
 };

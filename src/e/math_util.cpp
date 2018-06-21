@@ -23,3 +23,7 @@ int MathUtil::clamp(int x, int lower, int upper) {
 
   return x;
 }
+
+float MathUtil::lerp(float t, float a, float b){
+  return (1-t)*a + t*b;
+}

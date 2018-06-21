@@ -42,7 +42,7 @@ Point Action::getPoint(std::string key) {
 void ActionCollector::open() {
   std::ifstream file;
 
-  file.open("assets/data/example.timeline");
+  file.open("assets/data/simple.timeline");
 
   if (!file.is_open()) {
     printf("could not open file!\n");
@@ -94,6 +94,8 @@ void ActionCollector::add(Action a) {
 
   // TODO: if action happens before HEAD then insert it in the correct order
   actions.push_back(a);
+
+  sequence++;
 }
 
 void ActionCollector::save() {

@@ -40,11 +40,24 @@ int main(int argc, char *argv[]) {
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop(hook, FPS, 1);
 #else
+  const int frameDelay = 1000/FPS;
+
+  unsigned int frameStart;
+  int frameTime;
   while (!game->shouldQuit) {
-    int frameStart = SDL_GetTicks();
+    frameStart = SDL_GetTicks();
+
+    // int frameStart = SDL_GetTicks();
 
     hook();
 
+    frameTime = SDL_GetTicks() - frameStart;
+
+    if (frameDelay > frameTime) {
+      SDL_Delay(frameDelay - frameTime);
+    }
+
+    /*
     int frameEnd = SDL_GetTicks();
     int frameDuration = frameEnd - frameStart;
 
@@ -52,7 +65,7 @@ int main(int argc, char *argv[]) {
       int delayFor = frameTimeMs - frameDuration;
 
       SDL_Delay(frameTimeMs - frameDuration);
-    }
+    }*/
   }
 #endif
 
@@ -62,28 +75,32 @@ int main(int argc, char *argv[]) {
 }
 
 void hook() {
-  int frameStart = SDL_GetTicks();
+  // int frameStart = SDL_GetTicks();
 
   game->update((frameTimeMs)/100);
-
+/*
   int tickEnd = SDL_GetTicks();
   int tickDuration = tickEnd - frameStart;
-
+*/
   SDL_Renderer* renderer = Core::renderer;
 
   SDL_SetRenderDrawColor(renderer, Core::clear.r, Core::clear.g, Core::clear.b, 255);
   SDL_RenderClear(renderer);
 
   game->render(renderer);
+  /*
   int renderEnd = SDL_GetTicks();
 
   int renderDuration = renderEnd - tickEnd;
   int frameDuration = SDL_GetTicks() - frameStart;
+  */
 
   SDL_RenderPresent(renderer);
+
+  /*
   if (frameDuration > 16) {
     printf("WARNING: frame took too long to complete (%d vs %d) (t: %d, r: %d).\n", frameDuration, 16, tickDuration, renderDuration);
-  }
+  }*/
 }
 
 int startGame() {

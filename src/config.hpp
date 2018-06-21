@@ -9,4 +9,6 @@
 #define LVL_PATH "assets/lvl/"
 #define FONT_PATH "assets/gfx/font/"
 
+//#define TT_MODE_RECORD
+
 // #define DEBUG 1

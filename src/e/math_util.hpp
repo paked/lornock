@@ -9,4 +9,6 @@ namespace MathUtil {
 
   // rand between -1 and +1
   float randN1P1();
+
+  float lerp(float d, float a, float b);
 }

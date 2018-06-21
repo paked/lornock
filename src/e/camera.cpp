@@ -4,14 +4,10 @@
 #include <e/collision.hpp>
 #include <e/math_util.hpp>
 
-float lerp(float t, float a, float b){
-  return (1-t)*a + t*b;
-}
-
 void Camera::tick(float dt) {
   Point p = getTarget();
-  realX = lerp(0.05, realX, p.x);
-  realY = lerp(0.05, realY, p.y);
+  realX = MathUtil::lerp(0.05, realX, p.x);
+  realY = MathUtil::lerp(0.05, realY, p.y);
 
   float shake = shakeTrauma*shakeTrauma;
 

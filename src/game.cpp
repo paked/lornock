@@ -5,7 +5,6 @@
 #include <e/resources.hpp>
 #include <e/collision.hpp>
 
-
 // fwd declaration for Scene
 // TODO: figure out how to do this fwd declaration better
 #include <e/camera.hpp>
@@ -14,6 +13,7 @@
 #include <e/group.hpp>
 
 #include <past_player.hpp>
+#include <config.hpp>
 
 Game::Game() : Scene() {}
 
@@ -34,7 +34,9 @@ void Game::start() {
   // Action mgmt
   actionCollector = new ActionCollector();
 
+#ifndef TT_MODE_RECORD
   actionCollector->open();
+#endif
 
   actionCollector->interval.go();
 
@@ -55,6 +57,7 @@ void Game::start() {
   player->sprite->center();
   entities->add(player);
 
+#ifdef TT_MODE_RECORD
   actionCollector->add({
     "SPAWN",
     {
@@ -62,6 +65,7 @@ void Game::start() {
       { "pos", "(35.0,35.0)" },
     }
   });
+#endif
 
   // Camera
   camera->target = mapCenter;
@@ -89,6 +93,7 @@ void Game::tick(float dt) {
   }
 
   if (actionCollector->interval.done()) {
+#ifndef TT_MODE_RECORD
     for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
       Action a = actionCollector->actions[acUpTo];
 
@@ -104,14 +109,15 @@ void Game::tick(float dt) {
         // We don't handle MOVES here
       }
     }
-
-    /*
+#else
     if (player->actionDirty) {
       actionCollector->add(player->action);
 
       player->actionDirty = false;
-      actionCollector->sequence++;
-    }*/
+
+      printf("action commit\n");
+    }
+#endif
 
     actionCollector->interval.go();
 

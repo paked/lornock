@@ -1,5 +1,7 @@
 #include <past_player.hpp>
 
+#include <e/math_util.hpp>
+
 PastPlayer::PastPlayer(ActionCollector* ac, Action a) : actionCollector(ac) {
   Point pos = a.getPoint("pos");
   sequence = a.getSequence();
@@ -20,10 +22,14 @@ void PastPlayer::start() {
 }
 
 void PastPlayer::tick(float dt) {
-  if (hasNextAction && nextAction.getTime() <= actionCollector->time) {
+  if (hasNextAction && nextAction.getTime() < actionCollector->time) {
     Action a = nextAction;
 
     if (nextAction.name == "MOVE") {
+      printf("MAKING MOVE\n");
+
+      posBuffer = a.getPoint("pos");
+      /*
       Point pos = a.getPoint("pos");
       Point vel = a.getPoint("vel");
       Point acc = a.getPoint("acc");
@@ -32,10 +38,12 @@ void PastPlayer::tick(float dt) {
       sprite->y = pos.y;
 
       sprite->velocity.x = vel.x;
-      sprite->velocity.y = vel.y;
+      sprite->velocity.y = vel.y;*/
 
-      sprite->acceleration.x = acc.x;
-      sprite->acceleration.y = acc.y;
+      /*sprite->acceleration.x = acc.x;
+      sprite->acceleration.y = acc.y;*/
+
+      printf("s: %d, acc: %s\n", a.getSequence(), a.params["acc"].c_str());
     } else {
       printf("I don't know what the fuck to do with that action!\n");
     }
@@ -44,6 +52,9 @@ void PastPlayer::tick(float dt) {
 
     findNextAction();
   }
+
+  sprite->x = MathUtil::lerp(0.08, sprite->x, posBuffer.x);
+  sprite->y = MathUtil::lerp(0.08, sprite->y, posBuffer.y);
 
   Entity::tick(dt);
 }
