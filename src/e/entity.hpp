@@ -17,8 +17,10 @@ struct Component;
 
 struct Entity {
   virtual void start();
+
   virtual void tick(float dt);
   virtual void postTick();
+  virtual void render();
 
   float getDepth();
 

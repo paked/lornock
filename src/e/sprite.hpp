@@ -16,9 +16,10 @@ struct Sprite : Component {
   Sprite(std::string texName, float x=0, float y=0);
 
   void tick(float dt);
+  void postTick();
+  void render();
 
   void job(Scene* scene, float depth=0);
-  void render(SDL_Renderer* renderer, Camera* camera);
 
   Rect rect();
 

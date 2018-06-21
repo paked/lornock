@@ -28,4 +28,10 @@ struct Group : Entity {
       m->postTick();
     }
   }
+
+  void render() {
+    for (auto& m : members) {
+      m->render();
+    }
+  }
 };

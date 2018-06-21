@@ -14,7 +14,25 @@ void Entity::tick(float dt) {
   }
 }
 
-void Entity::postTick() {}
+void Entity::postTick() {
+  for (auto& comp : components) {
+    if (!comp->active) {
+      continue;
+    }
+
+    comp->postTick();
+  }
+}
+
+void Entity::render() {
+  for (auto& comp : components) {
+    if (!comp->active) {
+      continue;
+    }
+
+    comp->render();
+  }
+}
 
 float Entity::getDepth() {
   float depth = localDepth;

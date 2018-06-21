@@ -13,6 +13,7 @@ struct Player : Entity {
 
   void start();
   void tick(float dt);
+  void postTick();
 
   Tilelayer::Data getTBBGLayerData();
   Tilelayer::Data getTBItemLayerData();
@@ -41,6 +42,7 @@ struct Player : Entity {
   Tilelayer* tbBGLayer;
   Tilelayer* tbItemLayer;
 
-  bool actionDirty = false;
   Action action;
+
+  bool actionDirty = false;
 };

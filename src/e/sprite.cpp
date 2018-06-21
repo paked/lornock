@@ -49,9 +49,6 @@ void Sprite::tick(float dt) {
     printf("WARNING: calling tick on an entityless component!\n");
   }
 
-  x += nextPositionDelta.x;
-  y += nextPositionDelta.y;
-
   velocity.x += (acceleration.x) * dt;
   if (velocity.x > maxVelocity.x) {
     velocity.x = maxVelocity.x;
@@ -59,7 +56,7 @@ void Sprite::tick(float dt) {
     velocity.x = -maxVelocity.x;
   }
 
-  if (acceleration.x == 0) {
+  if (fabs(acceleration.x) < 0.1) {
     velocity.x *= drag.x;
   }
 
@@ -70,17 +67,17 @@ void Sprite::tick(float dt) {
     velocity.y = -maxVelocity.y;
   }
 
-  if (acceleration.y == 0) {
+  if (fabs(acceleration.y) == 0) {
     velocity.y *= drag.y;
   }
 
   nextPositionDelta.x = velocity.x * dt;
   nextPositionDelta.y = velocity.y * dt;
+}
 
-  // Send render commands
-  if (visible) {
-    job(entity->scene, entity->getDepth() + localDepth);
-  }
+void Sprite::postTick() {
+  x += nextPositionDelta.x;
+  y += nextPositionDelta.y;
 }
 
 void Sprite::job(Scene* scene, float depth) {
@@ -105,26 +102,10 @@ void Sprite::job(Scene* scene, float depth) {
   scene->renderer->queue.push(j);
 }
 
-void Sprite::render(SDL_Renderer* renderer, Camera* camera) {
-  SDL_Rect dst = camera->toView(rect(), hud);
-  SDL_Rect src = getSRC();
-
-  SDL_RendererFlip f = SDL_FLIP_NONE;
-
-  if (flip) {
-    f = SDL_FLIP_HORIZONTAL;
+void Sprite::render() {
+  if (!visible) {
+    return;
   }
 
-  unsigned char oldAlpha;
-  SDL_GetTextureAlphaMod(texture, &oldAlpha);
-
-  if (alpha != oldAlpha) {
-    SDL_SetTextureAlphaMod(texture, alpha);
-  }
-
-  SDL_RenderCopyEx(renderer, texture, &src, &dst, angle, NULL, f);
-
-  if (alpha != oldAlpha) {
-    SDL_SetTextureAlphaMod(texture, oldAlpha);
-  }
+  job(entity->scene, entity->getDepth() + localDepth);
 }

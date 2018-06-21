@@ -12,7 +12,6 @@
 #include <e/entity.hpp>
 #include <e/group.hpp>
 
-#include <past_player.hpp>
 #include <config.hpp>
 
 Game::Game() : Scene() {}
@@ -67,13 +66,22 @@ void Game::start() {
   });
 #endif
 
+  pastPlayers = new Group<PastPlayer>();
+  entities->add(pastPlayers);
+
   // Camera
   camera->target = mapCenter;
 }
 
-void Game::tick(float dt) {
+void Game::collisions() {
   Collision::collide(player->sprite, asteroid->map);
 
+  for (auto& m : pastPlayers->members) {
+    Collision::collide(m->sprite, asteroid->map);
+  }
+}
+
+void Game::tick(float dt) {
   if (player->use.justDown()) {
     Collision::TileHit th = asteroid->getPickWithinOreSpace(player->sprite);
 
@@ -92,6 +100,12 @@ void Game::tick(float dt) {
     }
   }
 
+  if (save.justDown()) {
+    actionCollector->save();
+  }
+}
+
+void Game::postTick() {
   if (actionCollector->interval.done()) {
 #ifndef TT_MODE_RECORD
     for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
@@ -103,8 +117,7 @@ void Game::tick(float dt) {
 
       if (a.name == "SPAWN") {
         PastPlayer* pp = new PastPlayer(actionCollector, a);
-
-        entities->add(pp);
+        pastPlayers->add(pp);
       } else if (a.name == "MOVE") {
         // We don't handle MOVES here
       }
@@ -114,17 +127,13 @@ void Game::tick(float dt) {
       actionCollector->add(player->action);
 
       player->actionDirty = false;
-
-      printf("action commit\n");
     }
+
+    printf("action commit\n");
 #endif
 
     actionCollector->interval.go();
 
     actionCollector->time++;
-  }
-
-  if (save.justDown()) {
-    actionCollector->save();
   }
 }

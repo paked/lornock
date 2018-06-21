@@ -30,6 +30,7 @@ struct ActionCollector {
   int sequence = 0;
   int time = 0;
 
+  // 1 tick is 100ms
   const int ticks = 10;
   Timer interval = Timer(1000/ticks);
 };

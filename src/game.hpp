@@ -6,6 +6,7 @@
 #include <e/input.hpp>
 
 #include <player.hpp>
+#include <past_player.hpp>
 #include <asteroid.hpp>
 #include <action.hpp>
 
@@ -14,10 +15,14 @@ struct Game : Scene {
 
   bool load();
   void start();
+  void collisions();
   void tick(float dt);
+  void postTick();
 
   Player* player;
   Asteroid* asteroid;
+
+  Group<PastPlayer>* pastPlayers;
 
   Input save = Input(SDL_SCANCODE_RETURN);
 

@@ -61,18 +61,24 @@ void Player::tick(float dt) {
   sprite->acceleration.x = acceleration * dir.x;
   sprite->acceleration.y = acceleration * dir.y;
 
+  if (fabs(dir.x - lastMove.x) > 0.1 || fabs(dir.y - lastMove.y) > 0.1) {
+    actionDirty = true;
+  }
+
   lastMove = dir;
 
   tbItemLayer->data = getTBItemLayerData();
 
   Entity::tick(dt);
+}
 
-  actionDirty = true;
+void Player::postTick() {
+  Entity::postTick();
 
   action = {
     "MOVE",
     {
-      { "pos", "(" + std::to_string(sprite->x + sprite->nextPositionDelta.x) + "," + std::to_string(sprite->y + sprite->nextPositionDelta.y) + ")" },
+      { "pos", "(" + std::to_string(sprite->x) + "," + std::to_string(sprite->y) + ")" }
     }
   };
 }

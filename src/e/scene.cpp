@@ -21,6 +21,8 @@ bool Scene::load() {
 
 void Scene::start() {}
 void Scene::tick(float dt) {}
+void Scene::collisions() {}
+void Scene::postTick() {}
 
 void Scene::update(float dt) {
   SDL_Event event;
@@ -60,6 +62,15 @@ void Scene::update(float dt) {
   tick(dt);
 
   entities->tick(dt);
+
+  collisions();
+
+  entities->postTick();
+
+  postTick();
+
+  entities->render();
+
   camera->tick(dt);
 }
 

@@ -6,8 +6,8 @@
 
 void Camera::tick(float dt) {
   Point p = getTarget();
-  realX = MathUtil::lerp(0.05, realX, p.x);
-  realY = MathUtil::lerp(0.05, realY, p.y);
+  realX = MathUtil::lerpf(0.05, realX, p.x);
+  realY = MathUtil::lerpf(0.05, realY, p.y);
 
   float shake = shakeTrauma*shakeTrauma;
 

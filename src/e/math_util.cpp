@@ -24,6 +24,16 @@ int MathUtil::clamp(int x, int lower, int upper) {
   return x;
 }
 
-float MathUtil::lerp(float t, float a, float b){
+float MathUtil::clampf(float x, float lower, float upper) {
+  if (x > upper) {
+    return upper;
+  } else if (x < lower) {
+    return lower;
+  }
+
+  return x;
+}
+
+float MathUtil::lerpf(float t, float a, float b) {
   return (1-t)*a + t*b;
 }

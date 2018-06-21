@@ -73,13 +73,3 @@ SDL_Rect Spritesheet::getSRC() {
     frameHeight
   };
 }
-
-void Spritesheet::renderFrame(int frame, SDL_Renderer* renderer, Camera* camera) {
-  int f = this->frame;
-
-  this->frame = frame;
-
-  render(renderer, camera);
-
-  this->frame = f;
-}

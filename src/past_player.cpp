@@ -3,8 +3,10 @@
 #include <e/math_util.hpp>
 
 PastPlayer::PastPlayer(ActionCollector* ac, Action a) : actionCollector(ac) {
-  Point pos = a.getPoint("pos");
+  actionCurrent = a;
   sequence = a.getSequence();
+
+  Point pos = a.getPoint("pos");
 
   sprite = new Sprite("test.png", pos.x, pos.y);
 }
@@ -22,24 +24,39 @@ void PastPlayer::start() {
 }
 
 void PastPlayer::tick(float dt) {
-  if (hasNextAction && nextAction.getTime() < actionCollector->time) {
-    Action a = nextAction;
+  if (hasNextAction) {
+    float pc =  1.0 - ((float) ((posStartTime + posDuration) - SDL_GetTicks())) / (posDuration);
 
-    if (nextAction.name == "MOVE") {
-      posBuffer = a.getPoint("pos");
-    } else {
-      printf("I don't know what the fuck to do with that action!\n");
+    if (pc >= 0 && pc <= 1) {
+      sprite->x = MathUtil::lerpf(pc, posCurrent.x, posNext.x);
+      sprite->y = MathUtil::lerpf(pc, posCurrent.y, posNext.y);
     }
-
-    sequence = a.getSequence();
-
-    findNextAction();
   }
 
-  sprite->x = MathUtil::lerp(0.08, sprite->x, posBuffer.x);
-  sprite->y = MathUtil::lerp(0.08, sprite->y, posBuffer.y);
-
   Entity::tick(dt);
+}
+
+void PastPlayer::postTick() {
+  while (hasNextAction && actionNext.getTime() < actionCollector->time) {
+    actionCurrent = actionNext;
+
+    sequence = actionCurrent.getSequence();
+
+    findNextAction();
+
+    if (actionNext.name == "MOVE") {
+      posCurrent = actionCurrent.getPoint("pos");
+ 
+      posNext = actionNext.getPoint("pos");
+
+      posStartTime = SDL_GetTicks();
+      posDuration = convertTicksToMS(actionNext.getTime() - actionCurrent.getTime());
+    } else {
+      printf("Unknown action\n");
+    }
+  }
+
+  Entity::postTick();
 }
 
 void PastPlayer::findNextAction() {
@@ -49,9 +66,13 @@ void PastPlayer::findNextAction() {
     Action a = actionCollector->actions[i];
 
     if (a.getSequence() == sequence + 1) {
-      nextAction = a;
+      actionNext = a;
 
       hasNextAction = true;
     }
   }
+}
+
+int PastPlayer::convertTicksToMS(int t) {
+  return t * (1000/actionCollector->ticks);
 }

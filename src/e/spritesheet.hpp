@@ -15,8 +15,6 @@ struct Spritesheet : Sprite {
   void playAnimation(std::string name, bool loop = true);
   void addAnimation(std::string name, Animation anim);
 
-  void renderFrame(int frame, SDL_Renderer* renderer, Camera* camera);
-
   int frameDuration = 1000/20;
   int frameWidth;
   int frameHeight;

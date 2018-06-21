@@ -2,6 +2,7 @@
 
 #include <e/entity.hpp>
 #include <e/sprite.hpp>
+#include <e/timer.hpp>
 
 #include <action.hpp>
 
@@ -10,17 +11,23 @@ struct PastPlayer : Entity {
 
   void start();
   void tick(float dt);
+  void postTick();
 
   void findNextAction();
 
   ActionCollector* actionCollector;
-  Action nextAction;
-
+  Action actionCurrent;
+  Action actionNext;
   bool hasNextAction = false;
 
   int sequence;
 
   Sprite* sprite;
 
-  Point posBuffer;
+  int posStartTime;
+  int posDuration;
+  Point posCurrent;
+  Point posNext;
+
+  int convertTicksToMS(int t);
 };
