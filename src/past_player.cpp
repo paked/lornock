@@ -26,24 +26,7 @@ void PastPlayer::tick(float dt) {
     Action a = nextAction;
 
     if (nextAction.name == "MOVE") {
-      printf("MAKING MOVE\n");
-
       posBuffer = a.getPoint("pos");
-      /*
-      Point pos = a.getPoint("pos");
-      Point vel = a.getPoint("vel");
-      Point acc = a.getPoint("acc");
-
-      sprite->x = pos.x;
-      sprite->y = pos.y;
-
-      sprite->velocity.x = vel.x;
-      sprite->velocity.y = vel.y;*/
-
-      /*sprite->acceleration.x = acc.x;
-      sprite->acceleration.y = acc.y;*/
-
-      printf("s: %d, acc: %s\n", a.getSequence(), a.params["acc"].c_str());
     } else {
       printf("I don't know what the fuck to do with that action!\n");
     }
