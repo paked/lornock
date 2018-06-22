@@ -4,6 +4,7 @@
 
 #include <e/scene.hpp>
 #include <e/input.hpp>
+#include <e/info_asset.hpp>
 
 #include <player.hpp>
 #include <past_player.hpp>
@@ -25,6 +26,8 @@ struct Game : Scene {
   Group<PastPlayer>* pastPlayers;
 
   Input save = Input(SDL_SCANCODE_RETURN);
+
+  InfoAsset worldAsset;
 
   ActionCollector* actionCollector;
   int acUpTo = 0;

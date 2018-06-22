@@ -92,8 +92,22 @@ void ActionCollector::add(Action a) {
   a.params["t"] = std::to_string(time);
   a.params["s"] = std::to_string(sequence);
 
-  // TODO: if action happens before HEAD then insert it in the correct order
-  actions.push_back(a);
+  int insertAt = 0;
+
+  // TODO: do lookup backwards
+  for (int i = 0; i < actions.size(); i++) {
+    Action b = actions[i];
+
+    if (a.getTime() > b.getTime()) {
+      insertAt = i + 1;
+
+      continue;
+    }
+
+    break;
+  }
+
+  actions.insert(actions.begin() + insertAt, a);
 
   sequence++;
 }
@@ -101,7 +115,7 @@ void ActionCollector::add(Action a) {
 void ActionCollector::save() {
   std::ofstream file;
 
-  file.open("out.data", std::ios::out);
+  file.open("assets/data/simple.timeline", std::ios::out);
   if (!file.is_open()) {
     printf("Could not open file\n");
 
@@ -113,4 +127,16 @@ void ActionCollector::save() {
   }
 
   file.close();
+}
+
+bool ActionCollector::findLastAction(Action& a) {
+  for (auto& b : actions) {
+    if (b.getSequence() == sequence - 1) {
+      a = b;
+
+      return true;
+    }
+  }
+
+  return false;
 }

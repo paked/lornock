@@ -29,7 +29,7 @@ void PastPlayer::tick(float dt) {
 
     if (pc >= 0 && pc <= 1) {
       sprite->x = MathUtil::lerpf(pc, posCurrent.x, posNext.x);
-      sprite->y = MathUtil::lerpf(pc, posCurrent.y, posNext.y);
+      sprite->y = MathUtil::lerpf(pc, posCurrent.y, posNext.y);   
     }
   }
 

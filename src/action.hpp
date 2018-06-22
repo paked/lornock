@@ -25,10 +25,14 @@ struct ActionCollector {
   void add(Action a);
   void save();
 
+  bool findLastAction(Action& a);
+
   std::vector<Action> actions;
 
   int sequence = 0;
   int time = 0;
+
+  int computedTime = 0;
 
   // 1 tick is 100ms
   const int ticks = 10;

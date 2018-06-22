@@ -24,6 +24,8 @@ bool Game::load() {
   ok |= Resources::load("toolbar.png");
   ok |= Resources::load("toolbar_items.png");
 
+  ok |= worldAsset.load("assets/data/world.save");
+
   return ok;
 }
 
@@ -33,9 +35,10 @@ void Game::start() {
   // Action mgmt
   actionCollector = new ActionCollector();
 
-#ifndef TT_MODE_RECORD
+  actionCollector->time = worldAsset.meta["time"].asInt();
+  actionCollector->sequence = worldAsset.meta["sequence"].asInt();
+
   actionCollector->open();
-#endif
 
   actionCollector->interval.go();
 
@@ -56,21 +59,39 @@ void Game::start() {
   player->sprite->center();
   entities->add(player);
 
-#ifdef TT_MODE_RECORD
+  Action a;
+  if (actionCollector->findLastAction(a)) {
+    Point p = a.getPoint("pos");
+    player->sprite->x = p.x;
+    player->sprite->y = p.y;
+
+    printf("found last action\n");
+  } else {
+    printf("fuck I cannot find the last action\n");
+  }
+
+    /*
   actionCollector->add({
     "SPAWN",
     {
       { "P", "0" },
       { "pos", "(35.0,35.0)" },
     }
-  });
-#endif
+  });*/
 
   pastPlayers = new Group<PastPlayer>();
   entities->add(pastPlayers);
 
   // Camera
   camera->target = mapCenter;
+
+  for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
+    Action a = actionCollector->actions[acUpTo];
+
+    if (a.getTime() > actionCollector->time) {
+      break;
+    }
+  }
 }
 
 void Game::collisions() {
@@ -102,12 +123,16 @@ void Game::tick(float dt) {
 
   if (save.justDown()) {
     actionCollector->save();
+
+    worldAsset.meta["time"] = std::to_string(actionCollector->time);
+    worldAsset.meta["sequence"] = std::to_string(actionCollector->sequence);
+
+    worldAsset.save("assets/data/world.save");
   }
 }
 
 void Game::postTick() {
   if (actionCollector->interval.done()) {
-#ifndef TT_MODE_RECORD
     for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
       Action a = actionCollector->actions[acUpTo];
 
@@ -122,15 +147,13 @@ void Game::postTick() {
         // We don't handle MOVES here
       }
     }
-#else
+
     if (player->actionDirty) {
+      printf("action commit\n");
       actionCollector->add(player->action);
 
       player->actionDirty = false;
     }
-
-    printf("action commit\n");
-#endif
 
     actionCollector->interval.go();
 

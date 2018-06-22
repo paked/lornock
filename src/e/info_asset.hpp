@@ -10,20 +10,19 @@ struct InfoItem {
   InfoItem() {};
   InfoItem(std::string v);
 
+  int asInt();
+
   std::string val;
 };
 
 struct InfoAsset {
-  InfoAsset(std::ifstream& file);
+  bool load(std::string fname);
+  bool load(std::ifstream& file);
+
+  void save(std::string fname);
 
   std::map<std::string, InfoItem> meta;
   std::vector<std::map<std::string, InfoItem>> body;
 
-  private:
-  bool isLineEmpty(std::string line);
   bool isSeparator(std::string line, char separator);
-
-  static std::string eatCharacters(std::string& line);
-  static std::string eatWhitespace(std::string& line);
-  static std::string eatLine(std::string& line);
 };
