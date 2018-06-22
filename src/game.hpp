@@ -26,6 +26,7 @@ struct Game : Scene {
   Group<PastPlayer>* pastPlayers;
 
   Input save = Input(SDL_SCANCODE_RETURN);
+  Input jump = Input(SDL_SCANCODE_TAB);
 
   InfoAsset worldAsset;
 

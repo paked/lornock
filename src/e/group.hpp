@@ -25,12 +25,20 @@ struct Group : Entity {
 
   void postTick() {
     for (auto& m : members) {
+      if (!m->active) {
+        continue;
+      }
+
       m->postTick();
     }
   }
 
   void render() {
     for (auto& m : members) {
+      if (!m->active) {
+        continue;
+      }
+
       m->render();
     }
   }

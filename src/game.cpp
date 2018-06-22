@@ -129,6 +129,27 @@ void Game::tick(float dt) {
 
     worldAsset.save("assets/data/world.save");
   }
+
+  if (jump.justDown()) {
+    actionCollector->add(
+        {
+          "JUMP",
+          {
+            { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" },
+            { "dt", "0" }
+          }
+        });
+
+    actionCollector->time = 0;
+
+    actionCollector->add({
+        "SPAWN",
+        {
+          { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" }
+        }});
+
+    acUpTo = 0;
+  }
 }
 
 void Game::postTick() {
@@ -140,7 +161,7 @@ void Game::postTick() {
         break;
       }
 
-      if (a.name == "SPAWN") {
+      if (a.name == "SPAWN" && a.getSequence() != actionCollector->sequence - 1) {
         PastPlayer* pp = new PastPlayer(actionCollector, a);
         pastPlayers->add(pp);
       } else if (a.name == "MOVE") {
@@ -149,7 +170,6 @@ void Game::postTick() {
     }
 
     if (player->actionDirty) {
-      printf("action commit\n");
       actionCollector->add(player->action);
 
       player->actionDirty = false;

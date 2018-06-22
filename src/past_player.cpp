@@ -24,7 +24,7 @@ void PastPlayer::start() {
 }
 
 void PastPlayer::tick(float dt) {
-  if (hasNextAction) {
+  if (moving) {
     float pc =  1.0 - ((float) ((posStartTime + posDuration) - SDL_GetTicks())) / (posDuration);
 
     if (pc >= 0 && pc <= 1) {
@@ -44,13 +44,43 @@ void PastPlayer::postTick() {
 
     findNextAction();
 
-    if (actionNext.name == "MOVE") {
-      posCurrent = actionCurrent.getPoint("pos");
- 
-      posNext = actionNext.getPoint("pos");
+    if (actionCurrent.name == "MOVE") {
+      /*
+       * This section is a bit of a mess, so here's an explanation until I clear it up:
+       *
+       * We do not always know that the next action will be a moving action (the player could always mine, jump, check inventory, etc.) so we look through the upcoming actions (skipping the ones which are not "MOVE"s in order to find the next move.
+       *
+       * It could (should) probably be simplified, but I am not in the right headspace to do this right now.
+       */
+      Action moveTarget;
 
-      posStartTime = SDL_GetTicks();
-      posDuration = convertTicksToMS(actionNext.getTime() - actionCurrent.getTime());
+      moving = false;
+      int targetSequence = sequence + 1;
+      for (int i = 0; i < actionCollector->actions.size(); i++) {
+        Action c = actionCollector->actions[i];
+
+        if (c.getSequence() != targetSequence) {
+          continue;
+        }
+
+        if (c.name != "MOVE") {
+          targetSequence++;
+        }
+
+        moving = true;
+        moveTarget = c;
+      }
+
+      if (moving) {
+        posCurrent = actionCurrent.getPoint("pos");
+        posNext = moveTarget.getPoint("pos");
+
+        posStartTime = SDL_GetTicks();
+        posDuration = convertTicksToMS(moveTarget.getTime() - actionCurrent.getTime());
+      }
+    } else if (actionCurrent.name == "JUMP") {
+      // TODO: need to remove this object here
+      active = false;
     } else {
       printf("Unknown action\n");
     }
@@ -61,6 +91,8 @@ void PastPlayer::postTick() {
 
 void PastPlayer::findNextAction() {
   hasNextAction = false;
+
+  actionNext = Action{"INVALID"};
 
   for (int i = 0; i < actionCollector->actions.size(); i++) {
     Action a = actionCollector->actions[i];

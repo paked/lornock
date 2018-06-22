@@ -29,5 +29,7 @@ struct PastPlayer : Entity {
   Point posCurrent;
   Point posNext;
 
+  bool moving = false;
+
   int convertTicksToMS(int t);
 };
