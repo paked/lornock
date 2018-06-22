@@ -23,6 +23,10 @@ int Action::getSequence() {
   return getInt("s");
 }
 
+int Action::getJump() {
+  return getInt("j");
+}
+
 int Action::getInt(std::string key) {
   std::string param = params[key];
 
@@ -91,6 +95,7 @@ void ActionCollector::open() {
 void ActionCollector::add(Action a) {
   a.params["t"] = std::to_string(time);
   a.params["s"] = std::to_string(sequence);
+  a.params["j"] = std::to_string(currentJump);
 
   int insertAt = 0;
 
@@ -139,4 +144,16 @@ bool ActionCollector::findLastAction(Action& a) {
   }
 
   return false;
+}
+
+void ActionCollector::setTime(int t) {
+  time = t;
+
+  for (processedToIndex = 0; processedToIndex < actions.size(); processedToIndex++) {
+    Action a = actions[processedToIndex];
+
+    if (a.getTime() > time) {
+      break;
+    }
+  }
 }

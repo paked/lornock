@@ -15,6 +15,7 @@ struct Action {
 
   int getSequence();
   int getTime();
+  int getJump();
 
   std::string name;
   std::map<std::string, std::string> params;
@@ -25,14 +26,17 @@ struct ActionCollector {
   void add(Action a);
   void save();
 
+  void setTime(int t);
+
   bool findLastAction(Action& a);
 
   std::vector<Action> actions;
 
   int sequence = 0;
   int time = 0;
+  int currentJump = 0;
 
-  int computedTime = 0;
+  int processedToIndex = 0;
 
   // 1 tick is 100ms
   const int ticks = 10;

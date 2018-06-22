@@ -20,6 +20,8 @@ struct Game : Scene {
   void tick(float dt);
   void postTick();
 
+  void jumpTo(int t);
+
   Player* player;
   Asteroid* asteroid;
 
@@ -31,5 +33,4 @@ struct Game : Scene {
   InfoAsset worldAsset;
 
   ActionCollector* actionCollector;
-  int acUpTo = 0;
 };

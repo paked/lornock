@@ -35,10 +35,11 @@ void Game::start() {
   // Action mgmt
   actionCollector = new ActionCollector();
 
-  actionCollector->time = worldAsset.meta["time"].asInt();
-  actionCollector->sequence = worldAsset.meta["sequence"].asInt();
-
   actionCollector->open();
+
+  actionCollector->setTime(worldAsset.meta["time"].asInt());
+  actionCollector->sequence = worldAsset.meta["sequence"].asInt();
+  actionCollector->currentJump = worldAsset.meta["jump"].asInt();
 
   actionCollector->interval.go();
 
@@ -84,14 +85,6 @@ void Game::start() {
 
   // Camera
   camera->target = mapCenter;
-
-  for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
-    Action a = actionCollector->actions[acUpTo];
-
-    if (a.getTime() > actionCollector->time) {
-      break;
-    }
-  }
 }
 
 void Game::collisions() {
@@ -126,36 +119,20 @@ void Game::tick(float dt) {
 
     worldAsset.meta["time"] = std::to_string(actionCollector->time);
     worldAsset.meta["sequence"] = std::to_string(actionCollector->sequence);
+    worldAsset.meta["jump"] = std::to_string(actionCollector->currentJump);
 
     worldAsset.save("assets/data/world.save");
   }
 
   if (jump.justDown()) {
-    actionCollector->add(
-        {
-          "JUMP",
-          {
-            { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" },
-            { "dt", "0" }
-          }
-        });
-
-    actionCollector->time = 0;
-
-    actionCollector->add({
-        "SPAWN",
-        {
-          { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" }
-        }});
-
-    acUpTo = 0;
+    jumpTo(15);
   }
 }
 
 void Game::postTick() {
   if (actionCollector->interval.done()) {
-    for (acUpTo; acUpTo < actionCollector->actions.size(); acUpTo++) {
-      Action a = actionCollector->actions[acUpTo];
+    for (actionCollector->processedToIndex; actionCollector->processedToIndex < actionCollector->actions.size(); actionCollector->processedToIndex++) {
+      Action a = actionCollector->actions[actionCollector->processedToIndex];
 
       if (a.getTime() > actionCollector->time) {
         break;
@@ -179,4 +156,52 @@ void Game::postTick() {
 
     actionCollector->time++;
   }
+}
+
+void Game::jumpTo(int t) {
+  actionCollector->add(
+      {
+      "JUMP",
+      {
+      { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" },
+      { "dt", std::to_string(t) }
+      }
+      });
+
+  actionCollector->setTime(t);
+
+  actionCollector->currentJump += 1;
+
+  // go through all actions to date, find any SPAWNS which have not been JUMP'd, remember last MOVE for these timelines.
+  // instantiate all these SPAWNS as new players with the last move being their seeding action.
+  std::map<int, Action> seeds;
+
+  for (int i = 0; i < actionCollector->actions.size(); i++) {
+    Action a = actionCollector->actions[i];
+
+    if (a.getTime() > actionCollector->time) {
+      break;
+    }
+
+    if (a.name == "SPAWN") {
+      seeds[a.getJump()] = a;
+    } else if (a.name == "JUMP") {
+      seeds.erase(a.getJump());
+    } else {
+      seeds[a.getJump()] = a;
+    }
+  }
+
+  for (auto& seed : seeds) {
+    Action a = seed.second;
+
+    PastPlayer* pp = new PastPlayer(actionCollector, a);
+    pastPlayers->add(pp);
+  }
+
+  actionCollector->add({
+      "SPAWN",
+      {
+      { "pos", "(" + std::to_string(player->sprite->x) + "," + std::to_string(player->sprite->y) + ")" }
+      }});
 }

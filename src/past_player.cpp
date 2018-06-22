@@ -79,16 +79,18 @@ void PastPlayer::postTick() {
         posDuration = convertTicksToMS(moveTarget.getTime() - actionCurrent.getTime());
       }
     } else if (actionCurrent.name == "JUMP") {
+      printf("Despawning past player...\n");
       // TODO: need to remove this object here
       active = false;
     } else {
-      printf("Unknown action\n");
+      printf("Unknown action: %s\n", actionCurrent.name.c_str());
     }
   }
 
   Entity::postTick();
 }
 
+// Next action is the next SEQUENTIAL and CHRONOLOGICAL action.
 void PastPlayer::findNextAction() {
   hasNextAction = false;
 
@@ -97,7 +99,7 @@ void PastPlayer::findNextAction() {
   for (int i = 0; i < actionCollector->actions.size(); i++) {
     Action a = actionCollector->actions[i];
 
-    if (a.getSequence() == sequence + 1) {
+    if (a.getSequence() == sequence + 1 && actionCurrent.getTime() <= a.getTime()) {
       actionNext = a;
 
       hasNextAction = true;
