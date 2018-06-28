@@ -1,46 +1,26 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(lornock)
 
-include_directories(src)
+# Glob vendored files
+file(GLOB VENDOR_INCLUDE_DIRECTORIES
+    vendor/glad/include)
+
+file(GLOB VENDOR_SOURCES
+    vendor/glad/src/glad.c)
+
+# Glob project files
+include_directories(
+    src
+
+    ${VENDOR_INCLUDE_DIRECTORIES})
 
 # Put source files in this glob
 file(GLOB SOURCES
     src/main.cpp
-    src/game.cpp
-    src/player.cpp
-    src/asteroid.cpp
-    src/item.cpp
-    src/action.cpp
-    src/past_player.cpp
 
-    # Entity system things
-    src/e/entity.cpp
-    src/e/group.cpp
-    src/e/component.cpp
-    src/e/scene.cpp
+    ${VENDOR_SOURCES})
 
-    # Engine utils
-    src/e/math_util.cpp
-    src/e/string_util.cpp
-
-    # Engine structs
-    src/e/info_asset.cpp
-    src/e/timer.cpp
-    src/e/renderer.cpp
-    src/e/camera.cpp
-    src/e/core.cpp
-    src/e/resources.cpp
-    src/e/sprite.cpp
-    src/e/spritesheet.cpp
-    src/e/point.cpp
-    src/e/csv.cpp
-    src/e/input.cpp
-    src/e/tilemap.cpp
-    src/e/tilelayer.cpp
-    src/e/collision.cpp
-    src/e/rect.cpp
-    src/e/text.cpp)
-
+# Create executable
 add_executable(lornock ${SOURCES})
 
 # Copy over assets
@@ -50,24 +30,29 @@ add_custom_command(TARGET lornock PRE_BUILD
     COMMENT "copying over assets"
 	VERBATIM)
 
-# Use C++11. We always use C++11.
+# We use a bit of a basterdised version of C++11, but it's C++11 no less
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
 
 # Runs if building for a native platform (currently only Linux)
 if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
+    # TODO(harrison): figure out exactly what this is for...
+    if(NOT WIN32)
+        set(GLAD_LIBRARIES dl)
+    endif()
+
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 	find_package(SDL2 REQUIRED)
-	find_package(SDL2_image REQUIRED)
-	find_package(SDL2_ttf REQUIRED)
 
-	include_directories(${SDL2_INCLUDE_DIR}
-						${SDL2_IMAGE_INCLUDE_DIR}
-						${SDL2_TTF_INCLUDE_DIR})
-                    message("sdl2 library: " ${SDL2_LIBRARY})
+	include_directories(${SDL2_INCLUDE_DIR})
+
 	target_link_libraries(lornock ${SDL2_LIBRARY}
 						 ${SDL2_IMAGE_LIBRARIES}
-						 ${SDL2_TTF_LIBRARIES})
+						 ${SDL2_TTF_LIBRARIES}
+                         ${GLAD_LIBRARIES})
+
+#[[ 
+# FIXME(harrison): I've disabled Emscripten builds until I get native builds working.
 elseif(EMSCRIPTEN)
     # Runs if building for Emscripten (web)
     # Modified excerpt from https://discourse.libsdl.org/t/sdl2-desktop-bridge-emscripten-questions/22632/2
@@ -92,6 +77,7 @@ elseif(EMSCRIPTEN)
 
     # Might need to play around with this if emscripten gives errors saying your program is too big.
     #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s TOTAL_MEMORY=67108864")
+]]
 else()
     message(FATAL_ERROR "Platform not supported")
 endif()
