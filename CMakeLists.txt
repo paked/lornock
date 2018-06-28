@@ -1,30 +1,50 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(lornock)
 
+#
+# Vendored code
+#
+
 # Glob vendored files
-file(GLOB VENDOR_INCLUDE_DIRECTORIES
+file(GLOB GLAD_INCLUDE_DIRECTORIES
     vendor/glad/include)
 
-file(GLOB VENDOR_SOURCES
+file(GLOB GLAD_SOURCES
     vendor/glad/src/glad.c)
 
-# Glob project files
+#
+# Lornock game code (liblornock.so/lornock.dll
+#
+
+file (GLOB LIB_SOURCES
+    src/lornock.cpp)
+
+add_library(lornock SHARED
+    ${LIB_SOURCES})
+
+target_include_directories(lornock PRIVATE src)
+
+#
+# Lornock runner (game/game.exe)
+#
+
+# Put source files in this glob
+file(GLOB GAME_SOURCES
+    src/sdl_main.cpp
+
+    ${GLAD_SOURCES})
+
+add_executable(game ${GAME_SOURCES})
+
 include_directories(
     src
 
-    ${VENDOR_INCLUDE_DIRECTORIES})
+    ${GLAD_INCLUDE_DIRECTORIES})
 
-# Put source files in this glob
-file(GLOB SOURCES
-    src/main.cpp
-
-    ${VENDOR_SOURCES})
-
-# Create executable
-add_executable(lornock ${SOURCES})
-
-# Copy over assets
-add_custom_command(TARGET lornock PRE_BUILD
+#
+# Handle assets
+#
+add_custom_command(TARGET game PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
     "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
     COMMENT "copying over assets"
@@ -46,7 +66,7 @@ if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
 
 	include_directories(${SDL2_INCLUDE_DIR})
 
-	target_link_libraries(lornock ${SDL2_LIBRARY}
+	target_link_libraries(game ${SDL2_LIBRARY}
 						 ${SDL2_IMAGE_LIBRARIES}
 						 ${SDL2_TTF_LIBRARIES}
                          ${GLAD_LIBRARIES})

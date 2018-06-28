@@ -12,3 +12,11 @@ void updateLornock(LornockMemory* m) {
     m->initialized = true;
   }
 }
+
+extern "C" {
+  void update(LornockMemory* m) {
+    updateLornock(m);
+
+    logln("Updating... something else...");
+  }
+}
