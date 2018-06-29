@@ -15,8 +15,8 @@ struct LornockData {
   hmm_vec2 vec;
 };
 
-extern "C" int initLornock() {
-  if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+extern "C" int initLornock(Platform* p) {
+  if (!gladLoadGLLoader(p->glLoadProc)) {
     logln("ERROR: Could not load glad");
 
     return 1;

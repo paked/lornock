@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 
+#include <SDL.h>
+
 // Include internal libraries
 
 // Include common
@@ -37,7 +39,7 @@ void* gameLibHandle = 0;
 
 typedef void (*GameLibUpdateFunction)(LornockMemory*);
 GameLibUpdateFunction gameLibUpdateFunction;
-typedef int (*GameLibInitFunction)();
+typedef int (*GameLibInitFunction)(Platform*);
 GameLibInitFunction gameLibInitFunction;
 
 ino_t getFileID(const char *fname) {
@@ -152,16 +154,21 @@ int main(void) {
     return 1;
   }
 
+  // Configure platform
+  platform.fps = 60;
+  platform.glLoadProc = SDL_GL_GetProcAddress;
+
   // Set up memory
   // TODO(harrison): Investigate if we need to `mprotect` these
-  lornockMemory.permanentStorageSize = megabytes(uint64(LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE));
+  lornockMemory.permanentStorageSize = LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE;
   lornockMemory.permanentStorage = mmap(0, lornockMemory.permanentStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
-  lornockMemory.transientStorageSize = megabytes(uint64(LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE));
+  lornockMemory.transientStorageSize = LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE;
   lornockMemory.transientStorage = mmap(0, lornockMemory.transientStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
+  // Check if game lib exists
   if (getFileID(gameLibPath) == 0) {
-    logln("ERROR: Game lib path does not exist");
+    logln("ERROR: Cannot find liblornock");
 
     return -1;
   }
@@ -173,8 +180,7 @@ int main(void) {
     return -1;
   }
 
-  // Run init code
-  if (gameLibInitFunction() != 0) {
+  if (gameLibInitFunction(&platform) != 0) {
     logln("ERROR: liblornock init code was not successful");
 
     return -1;
@@ -198,7 +204,7 @@ int main(void) {
         logln("INFO: Reloaded liblornock!");
 
         // Run init code
-        if (gameLibInitFunction() != 0) {
+        if (gameLibInitFunction(&platform) != 0) {
           logln("ERROR: liblornock init code was not successful");
 
           return -1;

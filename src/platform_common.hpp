@@ -2,9 +2,6 @@
 
 #include <cstdio>
 
-#include <SDL.h>
-// #include <glad/glad.h>
-
 #define log(...) fprintf(stderr, __VA_ARGS__)
 #define logln(fmt) fprintf(stderr, fmt "\n")
 #define logfln(fmt, ...) fprintf(stderr, fmt "\n", __VA_ARGS__)
@@ -26,10 +23,9 @@ typedef float     real32;
 typedef double    real64;
 typedef int32     bool32;
 
-typedef void* (* OpenGLLoadProc)(const char *name);
-
-#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE 2
-#define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE 8
+// We cast to uint64 to prevent issues where 32 bit constants wrap around.
+#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 2)
+#define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
 
 struct LornockMemory {
   bool initialized;
@@ -41,8 +37,12 @@ struct LornockMemory {
   void* transientStorage;
 };
 
+typedef void* (* OpenGLLoadProc)(const char *name);
+
 struct Platform {
   int fps;
 
   bool quit;
+
+  OpenGLLoadProc glLoadProc;
 };
