@@ -5,12 +5,14 @@ project(lornock)
 # Vendored code
 #
 
-# Glob vendored files
 file(GLOB GLAD_INCLUDE_DIRECTORIES
     vendor/glad/include)
 
 file(GLOB GLAD_SOURCES
     vendor/glad/src/glad.c)
+
+file (GLOB HANDMADE_MATH_INCLUDE_DIRECTORIES
+    vendor/HandmadeMath)
 
 #
 # Lornock game code (liblornock.so/lornock.dll
@@ -20,9 +22,13 @@ file (GLOB LIB_SOURCES
     src/lornock.cpp)
 
 add_library(lornock SHARED
+    ${GLAD_SOURCES}
     ${LIB_SOURCES})
 
-target_include_directories(lornock PRIVATE src)
+target_include_directories(lornock PRIVATE
+    src
+
+    ${HANDMADE_MATH_INCLUDE_DIRECTORIES})
 
 #
 # Lornock runner (game/game.exe)

@@ -10,8 +10,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 
-// Include SDL
-#include <SDL.h>
+// Include internal libraries
 
 // Include common
 #include <platform_common.hpp>
@@ -29,14 +28,17 @@ LornockMemory lornockMemory = {0};
 Platform platform = {0};
 
 // Hot reloading
+// TODO(harrison): Refactor this out into a separate platform_linux.h (and create a platform_win32.h)
 const char* gameLibPath = "./liblornock.so";
-typedef void (*GameLibFunction)(LornockMemory*);
 
 bool gameLibValid = false;
-ino_t gameLibFileID = 0;
+time_t gameLibFileTime;
 void* gameLibHandle = 0;
 
-GameLibFunction gameLibUpdateFunction;
+typedef void (*GameLibUpdateFunction)(LornockMemory*);
+GameLibUpdateFunction gameLibUpdateFunction;
+typedef int (*GameLibInitFunction)();
+GameLibInitFunction gameLibInitFunction;
 
 ino_t getFileID(const char *fname) {
   struct stat attr;
@@ -50,8 +52,20 @@ ino_t getFileID(const char *fname) {
   return attr.st_ino;
 }
 
+time_t getFileTime(const char *fname) {
+  struct stat attr;
+
+  if (stat(fname, &attr) != 0) {
+    logfln("ERROR: Can't get file ID of '%s'", fname);
+
+    attr.st_mtime = 0;
+  }
+
+  return attr.st_mtime;
+}
+
 bool gameLibNeedsToReload() {
-  return getFileID(gameLibPath) != gameLibFileID;
+  return getFileTime(gameLibPath) > gameLibFileTime;
 }
 
 void gameLibUnload() {
@@ -61,12 +75,14 @@ void gameLibUnload() {
 
   dlclose(gameLibHandle);
 
-  gameLibHandle = 0;
   gameLibValid = false;
+  gameLibHandle = 0;
+  gameLibFileTime = 0;
 }
 
 bool gameLibLoad() {
   if (gameLibHandle != 0) {
+    SDL_Delay(200);
     gameLibUnload();
   }
 
@@ -78,7 +94,7 @@ bool gameLibLoad() {
     return false;
   }
 
-  gameLibUpdateFunction = (GameLibFunction) dlsym(gameLibHandle, "update");
+  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(gameLibHandle, "updateLornock");
 
   if (!gameLibUpdateFunction) {
     logln("ERROR: Could not find update function");
@@ -86,7 +102,16 @@ bool gameLibLoad() {
     return false;
   }
 
+  gameLibInitFunction = (GameLibInitFunction) dlsym(gameLibHandle, "initLornock");
+
+  if (!gameLibUpdateFunction) {
+    logln("ERROR: Could not find init function");
+
+    return false;
+  }
+
   gameLibValid = true;
+  gameLibFileTime = getFileTime(gameLibPath);
 
   return true;
 }
@@ -98,11 +123,9 @@ int main(void) {
     return 1;
   }
 
-  SDL_GL_LoadLibrary(0);
-
   // Configure OpenGL context
   SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
@@ -124,28 +147,9 @@ int main(void) {
   glContext = SDL_GL_CreateContext(window);
 
   if (!glContext) {
-    logln("ERROR: Could not create OpenGL context");
+    logfln("ERROR: Could not create OpenGL context: %s", SDL_GetError());
 
     return 1;
-  }
-
-  if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-    logln("ERROR: Could not load glad");
-
-    return 1;
-  }
-
-  // Load game code
-  if (getFileID(gameLibPath) == 0) {
-    logln("ERROR: Game lib path does not exist");
-
-    return -1;
-  }
-
-  if (!gameLibLoad()) {
-    logln("ERROR: Failed to load game lib. Exiting game.");
-
-    return -1;
   }
 
   // Set up memory
@@ -156,6 +160,26 @@ int main(void) {
   lornockMemory.transientStorageSize = megabytes(uint64(LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE));
   lornockMemory.transientStorage = mmap(0, lornockMemory.transientStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
+  if (getFileID(gameLibPath) == 0) {
+    logln("ERROR: Game lib path does not exist");
+
+    return -1;
+  }
+
+  // Load game code
+  if (!gameLibLoad()) {
+    logln("ERROR: Failed to load game lib. Exiting game.");
+
+    return -1;
+  }
+
+  // Run init code
+  if (gameLibInitFunction() != 0) {
+    logln("ERROR: liblornock init code was not successful");
+
+    return -1;
+  }
+
   SDL_Event event;
   while (!platform.quit) {
     while (SDL_PollEvent(&event)) {
@@ -164,20 +188,27 @@ int main(void) {
       }
     }
 
+    // TODO(harrison): only reload code in debug mode
     if (gameLibNeedsToReload()) {
       bool ok = gameLibLoad();
 
       if (!ok) {
         logln("WARNING: can't load liblornock");
+      } else {
+        logln("INFO: Reloaded liblornock!");
+
+        // Run init code
+        if (gameLibInitFunction() != 0) {
+          logln("ERROR: liblornock init code was not successful");
+
+          return -1;
+        }
       }
     }
 
     if (gameLibValid) {
       gameLibUpdateFunction(&lornockMemory);
     }
-
-    glClearColor(0.39f, 0.58f, 0.93f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     SDL_GL_SwapWindow(window);
   }

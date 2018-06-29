@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdio>
-#include <glad/glad.h>
+
+#include <SDL.h>
+// #include <glad/glad.h>
 
 #define log(...) fprintf(stderr, __VA_ARGS__)
 #define logln(fmt) fprintf(stderr, fmt "\n")
@@ -23,6 +25,8 @@ typedef uint64_t  uint64;
 typedef float     real32;
 typedef double    real64;
 typedef int32     bool32;
+
+typedef void* (* OpenGLLoadProc)(const char *name);
 
 #define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE 2
 #define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE 8
