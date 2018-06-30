@@ -6,9 +6,12 @@
  */
 
 // Include external libraries
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <dlfcn.h>
+#include <sys/mman.h> // mmap
+#include <sys/stat.h> // stat
+#include <dlfcn.h> // dlopen,dlsym
+#include <unistd.h> // pread
+#include <fcntl.h>
+#include <errno.h>
 
 #include <SDL.h>
 
@@ -28,6 +31,39 @@ SDL_GLContext glContext;
 
 LornockMemory lornockMemory = {0};
 Platform platform = {0};
+
+// File IO
+void linuxLoadFromFile(const char* path, void** data, uint32* len) {
+  *data = 0;
+  *len = 0;
+
+  struct stat attr;
+
+  if (stat(path, &attr) != 0) {
+    logfln("ERROR: failed to find file: %s", path);
+    return;
+  }
+
+  int64 readSizeExpected = attr.st_size;
+
+  int fd = open(path, O_RDONLY);
+  if (fd == -1) {
+    logfln("ERROR: unable to open file. fd: %d", fd);
+  }
+
+  void* readData = mmap(0, readSizeExpected, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  int64 readSizeGot = read(fd, readData, readSizeExpected);
+
+  if (readSizeGot != readSizeExpected) {
+    logfln("ERROR: could not read file (read: %zd wanted: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
+  }
+
+  *data = readData;
+  *len = (uint32) readSizeExpected;
+
+  close(fd);
+}
 
 // Hot reloading
 // TODO(harrison): Refactor this out into a separate platform_linux.h (and create a platform_win32.h)
@@ -96,7 +132,7 @@ bool gameLibLoad() {
     return false;
   }
 
-  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(gameLibHandle, "updateLornock");
+  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(gameLibHandle, "lornockUpdate");
 
   if (!gameLibUpdateFunction) {
     logln("ERROR: Could not find update function");
@@ -104,7 +140,7 @@ bool gameLibLoad() {
     return false;
   }
 
-  gameLibInitFunction = (GameLibInitFunction) dlsym(gameLibHandle, "initLornock");
+  gameLibInitFunction = (GameLibInitFunction) dlsym(gameLibHandle, "lornockInit");
 
   if (!gameLibUpdateFunction) {
     logln("ERROR: Could not find init function");
@@ -157,9 +193,11 @@ int main(void) {
   // Configure platform
   platform.fps = 60;
   platform.glLoadProc = SDL_GL_GetProcAddress;
+  platform.loadFromFile = linuxLoadFromFile;
 
   // Set up memory
   // TODO(harrison): Investigate if we need to `mprotect` these
+  // TODO(harrison): Verify that we actually received this memory
   lornockMemory.permanentStorageSize = LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE;
   lornockMemory.permanentStorage = mmap(0, lornockMemory.permanentStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 

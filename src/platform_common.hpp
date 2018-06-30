@@ -23,10 +23,6 @@ typedef float     real32;
 typedef double    real64;
 typedef int32     bool32;
 
-// We cast to uint64 to prevent issues where 32 bit constants wrap around.
-#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 2)
-#define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
-
 struct LornockMemory {
   bool initialized;
 
@@ -37,12 +33,20 @@ struct LornockMemory {
   void* transientStorage;
 };
 
+// We cast to uint64 to prevent issues where 32 bit constants wrap around.
+#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 2)
+#define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
+
 typedef void* (* OpenGLLoadProc)(const char *name);
+typedef void (* LoadFromFile)(const char *path, void** data, uint32* len);
 
 struct Platform {
   int fps;
 
   bool quit;
 
+  LoadFromFile loadFromFile;
   OpenGLLoadProc glLoadProc;
 };
+
+#define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);

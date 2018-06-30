@@ -5,20 +5,18 @@ project(lornock)
 # Vendored code
 #
 
-file(GLOB GLAD_INCLUDE_DIRECTORIES
-    vendor/glad/include)
+file(GLOB GLAD_INCLUDE_DIRS vendor/glad/include)
+file(GLOB GLAD_SOURCES vendor/glad/src/glad.c)
 
-file(GLOB GLAD_SOURCES
-    vendor/glad/src/glad.c)
+file(GLOB STB_IMAGE_INCLUDE_DIRS vendor/stb)
 
-file (GLOB HANDMADE_MATH_INCLUDE_DIRECTORIES
-    vendor/HandmadeMath)
+file(GLOB HANDMADE_MATH_INCLUDE_DIRS vendor/HandmadeMath)
 
 #
 # Lornock game code (liblornock.so/lornock.dll
 #
 
-file (GLOB LIB_SOURCES
+file(GLOB LIB_SOURCES
     src/lornock.cpp)
 
 add_library(lornock SHARED
@@ -28,7 +26,8 @@ add_library(lornock SHARED
 target_include_directories(lornock PRIVATE
     src
 
-    ${HANDMADE_MATH_INCLUDE_DIRECTORIES})
+    ${STB_IMAGE_INCLUDE_DIRS}
+    ${HANDMADE_MATH_INCLUDE_DIRS})
 
 #
 # Lornock runner (game/game.exe)
@@ -45,16 +44,25 @@ add_executable(game ${GAME_SOURCES})
 include_directories(
     src
 
-    ${GLAD_INCLUDE_DIRECTORIES})
+    ${GLAD_INCLUDE_DIRS})
 
 #
 # Handle assets
 #
-add_custom_command(TARGET game PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory 
-    "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
-    COMMENT "copying over assets"
-	VERBATIM)
+
+set(DATA_FILES
+    data/shaders/default.vert
+    data/shaders/default.frag
+
+    data/gfx/test.png)
+
+foreach(DATA_FILE ${DATA_FILES})
+    set(DATA_IN ${CMAKE_CURRENT_SOURCE_DIR}/${DATA_FILE})
+    set(DATA_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DATA_FILE})
+
+    # If the file at DATA_IN does not exist or is changed, copy it into the build directory
+    configure_file(${DATA_IN} ${DATA_OUT} COPYONLY)
+endforeach(DATA_FILE)
 
 # We use a bit of a basterdised version of C++11, but it's C++11 no less
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
