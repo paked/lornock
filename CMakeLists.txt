@@ -54,7 +54,7 @@ set(DATA_FILES
     data/shaders/default.vert
     data/shaders/default.frag
 
-    data/gfx/test.png)
+    data/img/test.png)
 
 foreach(DATA_FILE ${DATA_FILES})
     set(DATA_IN ${CMAKE_CURRENT_SOURCE_DIR}/${DATA_FILE})

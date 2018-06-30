@@ -5,6 +5,13 @@ enum {
   MAX_SHADER
 };
 
+enum {
+#define texture(name) TEXTURE_ ##name,
+#include <assets_textures.cpp>
+  MAX_TEXTURE
+#undef texture
+};
+
 const char* shaderFilenames[MAX_SHADER] = {
 #define shader(name) #name
 #include <assets_shaders.cpp>
@@ -15,6 +22,18 @@ const char* shaderFilename(uint32 i) {
   dbg_assert(i >= 0 && i < MAX_SHADER);
 
   return shaderFilenames[i];
+}
+
+const char* textureFilenames[MAX_SHADER] = {
+#define texture(name) #name
+#include <assets_textures.cpp>
+#undef texture
+};
+
+const char* textureFilename(uint32 i) {
+  dbg_assert(i >= 0 && i < MAX_SHADER);
+
+  return textureFilenames[i];
 }
 
 struct Shader {
@@ -155,7 +174,64 @@ void shaderClean(Shader* shader) {
   shader->id = 0;
 }
 
+struct Texture {
+  GLuint id;
+
+  uint32 w;
+  uint32 h;
+};
+
+Texture textureInit(void* data, uint32 len) {
+  Texture t;
+
+  int w, h;
+  uint8 *tex_data = stbi_load_from_memory((unsigned char *)data, (int)len, &w, &h, 0, STBI_rgb_alpha);
+
+  if (!data) {
+    logln("Data has not been loaded");
+  }
+
+  t.w = (int16)w;
+  t.h = (int16)h;
+
+  glGenTextures(1, &t.id);
+  glBindTexture(GL_TEXTURE_2D, t.id);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, t.w, t.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  free(tex_data);
+
+  return t;
+}
+
+Texture textureLoad(const char* name) {
+  char textureFilename[64];
+  snprintf(textureFilename, 64, "data/img/%s.png", name);
+
+  void* data;
+  uint32 dataLen;
+
+  loadFromFile(textureFilename, &data, &dataLen);
+
+  return textureInit(data, dataLen);
+}
+
+void textureClean(Texture* tex) {
+  glDeleteTextures(1, &tex->id);
+  tex->id = 0;
+}
+
 struct Assets {
   int32 shaderRequests[MAX_SHADER];
   Shader shaders[MAX_SHADER];
+
+  int32 textureRequests[MAX_TEXTURE];
+  Texture textures[MAX_TEXTURE];
 };

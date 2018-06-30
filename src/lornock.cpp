@@ -41,6 +41,7 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   if (!m->initialized) {
     // Asset requests
     assetsRequestShader(SHADER_default);
+    assetsRequestTexture(TEXTURE_test);
 
     // Refresh assets
     updateAssets();
@@ -89,6 +90,7 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   shaderSetMatrix(&shader(SHADER_default), "view", view);
   shaderSetMatrix(&shader(SHADER_default), "projection", projection);
 
+  glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_test).id);
   glBindVertexArray(lornockData->VAO);
   glDrawArrays(GL_TRIANGLES, 0, 36);
 }
