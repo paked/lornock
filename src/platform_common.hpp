@@ -2,6 +2,9 @@
 
 #include <cstdio>
 
+// TODO: come up with a nicer name for dbg_assert
+#define dbg_assert(b) if (!(b)) { logfln("ASSERT FAILED: \"%s\" at \"%d\" \"%s\"", #b, __LINE__, __FILE__); }
+
 #define log(...) fprintf(stderr, __VA_ARGS__)
 #define logln(fmt) fprintf(stderr, fmt "\n")
 #define logfln(fmt, ...) fprintf(stderr, fmt "\n", __VA_ARGS__)

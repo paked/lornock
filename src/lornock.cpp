@@ -11,24 +11,14 @@
 #define STBI_ONLY_PNG
 #include <stb_image.h>
 
-// Lornock code
+// Platform common
 #include <platform_common.hpp>
 
 Platform* platform = 0;
 
-struct Shader {
-  GLuint id;
-};
-
-struct LornockData {
-  int number;
-
-  hmm_vec2 vec;
-
-  Shader defaultShader;
-
-  GLuint VAO, VBO, EBO;
-};
+// Lornock code
+#include <assets.cpp>
+#include <lornock_data.cpp>
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set
 // any state, as we want state to persist between hot reloads.
@@ -45,116 +35,19 @@ extern "C" int lornockInit(Platform* p) {
 }
 
 extern "C" void lornockUpdate(LornockMemory* m) {
-  LornockData* lornockData = (LornockData*) m->permanentStorage;
+  lornockData = (LornockData*) m->permanentStorage;
+
   if (!m->initialized) {
-    lornockData->number = 42;
+    // Asset requests
+    assetsRequestShader(SHADER_default);
 
-    lornockData->vec.x = 22;
-    lornockData->vec.y = 23;
+    // Refresh assets
+    updateAssets();
 
+    // TODO: refactor into drawInit or something
     glEnable(GL_DEPTH_TEST);
     // TODO(harrison): pull from platform layer
     glViewport(0, 0, 640, 480);
-
-    void* vert;
-    uint32 vertLen;
-    void* frag;
-    uint32 fragLen;
-
-    loadFromFile("data/shaders/default.vert", &vert, &vertLen);
-    loadFromFile("data/shaders/default.frag", &frag, &fragLen);
-
-    // Create shaders
-    GLuint vertShaderID = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-
-    bool failed = false;
-    GLint codeLen = 0;
-    GLint errorLogLen = 0;
-
-    {
-      codeLen = (GLint) vertLen;
-      const char* code = (char*) vert;
-
-      logln("INFO: compiling vert shader");
-
-      glShaderSource(vertShaderID, 1, &code, 0);
-      glCompileShader(vertShaderID);
-    }
-
-    {
-      GLint res;
-      glGetShaderiv(vertShaderID, GL_COMPILE_STATUS, &res);
-
-      failed |= res == GL_FALSE;
-
-      glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &errorLogLen);
-      if (errorLogLen) {
-        char errorLog[errorLogLen]; 
-        glGetShaderInfoLog(vertShaderID, errorLogLen, 0, errorLog);
-
-        log("ERROR: Could not compile vertex shader: %s", errorLog);
-      }
-    }
-
-    {
-      codeLen = (GLint) fragLen;
-      const char* code = (char*) frag;
-
-      logln("INFO: compiling frag shader");
-
-      glShaderSource(fragShaderID, 1, &code, 0);
-      glCompileShader(fragShaderID);
-    }
-
-    {
-      GLint res;
-      glGetShaderiv(fragShaderID, GL_COMPILE_STATUS, &res);
-
-      failed |= res == GL_FALSE;
-
-      glGetShaderiv(fragShaderID, GL_INFO_LOG_LENGTH, &errorLogLen);
-
-      if (errorLogLen) {
-        char errorLog[errorLogLen]; 
-        glGetShaderInfoLog(vertShaderID, errorLogLen, 0, errorLog);
-
-        log("ERROR: Could not compile fragment shader: %s", errorLog);
-      }
-    }
-
-    if (failed) {
-      logln("ERROR: could not load shader!");
-    }
-
-    GLuint programID = glCreateProgram();
-    glAttachShader(programID, vertShaderID);
-    glAttachShader(programID, fragShaderID);
-    glLinkProgram(programID);
-
-    {
-      GLint res;
-      glGetProgramiv(programID, GL_LINK_STATUS, &res);
-
-      failed = res == GL_FALSE;
-
-      glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &errorLogLen);
-
-      if (errorLogLen) {
-        char errorLog[errorLogLen]; 
-        glGetProgramInfoLog(programID, errorLogLen, 0, errorLog);
-
-        log("ERROR: Could not link shader program: %s", errorLog);
-      }
-    }
-
-    if (failed) {
-      logln("ERROR: Could not link shader");
-    }
-    glDeleteShader(fragShaderID);
-    glDeleteShader(vertShaderID);
-
-    lornockData->defaultShader.id = programID;
 
     // Init VBO, EBO, and VAO.
     GLuint VAO, VBO, EBO;
@@ -195,7 +88,7 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glUseProgram(lornockData->defaultShader.id);
+  glUseProgram(shader(SHADER_default).id);
   glBindVertexArray(lornockData->VAO);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
