@@ -21,11 +21,6 @@ struct Shader {
   GLuint id;
 };
 
-struct Assets {
-  int32 shaderRequests[MAX_SHADER];
-  Shader shaders[MAX_SHADER];
-};
-
 Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
   Shader s = {0};
 
@@ -142,7 +137,25 @@ Shader shaderLoad(const char* name) {
   s = shaderInit(vertData, vertLen, fragData, fragLen);
 }
 
+bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logln("ERROR: find uniform location");
+
+    return false;
+  }
+
+  glUniformMatrix4fv(loc, 1, GL_FALSE, &m.Elements[0][0]);
+
+  return true;
+}
+
 void shaderClean(Shader* shader) {
   glDeleteProgram(shader->id);
   shader->id = 0;
 }
+
+struct Assets {
+  int32 shaderRequests[MAX_SHADER];
+  Shader shaders[MAX_SHADER];
+};
