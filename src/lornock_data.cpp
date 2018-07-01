@@ -1,5 +1,12 @@
+#define WORLD_WIDTH 3
+#define WORLD_HEIGHT 3
+#define WORLD_DEPTH 3
+
 struct LornockData {
   Assets assets;
+
+  uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
+  uint64 vertCount;
 
   GLuint VAO, VBO, EBO;
 }* lornockData = 0;
