@@ -190,14 +190,22 @@ int main(void) {
     return 1;
   }
 
+  if (SDL_GL_SetSwapInterval(1) < 0) {
+    logfln("ERROR: could not set SDL swap interval %s", SDL_GetError());
+
+    // TODO(harrison): create an internal system for handling framerate if
+    // vsync doesn't exist
+  }
+
   // Configure platform
-  platform.fps = 60;
+  platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
   platform.loadFromFile = linuxLoadFromFile;
+  platform.deltaTime = 1/platform.fps;
 
   // Set up memory
   // TODO(harrison): Investigate if we need to `mprotect` these
-  // TODO(harrison): Verify that we actually received this memory
+  // TODO(harrison): Have error checks which verify we get this memory
   lornockMemory.permanentStorageSize = LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE;
   lornockMemory.permanentStorage = mmap(0, lornockMemory.permanentStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
@@ -224,8 +232,12 @@ int main(void) {
     return -1;
   }
 
+  uint64 perfCounterFreq = SDL_GetPerformanceFrequency();
+
   SDL_Event event;
   while (!platform.quit) {
+    uint64 timeFrameStart = SDL_GetPerformanceCounter();
+
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         platform.quit = true;
@@ -241,7 +253,6 @@ int main(void) {
       } else {
         logln("INFO: Reloaded liblornock!");
 
-        // Run init code
         if (gameLibInitFunction(&platform) != 0) {
           logln("ERROR: liblornock init code was not successful");
 
@@ -255,6 +266,16 @@ int main(void) {
     }
 
     SDL_GL_SwapWindow(window);
+
+    uint64 timeFrameEnd = SDL_GetPerformanceCounter();
+    uint64 timeElapsed = timeFrameEnd - timeFrameStart;
+
+    real64 deltaTime = ((((real64)timeElapsed) / (real64)perfCounterFreq));
+    // real64 fps = (real64)perfCounterFreq / (real64)timeElapsed;
+
+    // printf("%f ms/f, %.02ff/s\n", deltaTime, fps);
+
+    platform.deltaTime = deltaTime;
   }
 
   SDL_GL_DeleteContext(glContext);

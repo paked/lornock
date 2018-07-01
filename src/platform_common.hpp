@@ -50,6 +50,8 @@ struct Platform {
 
   LoadFromFile loadFromFile;
   OpenGLLoadProc glLoadProc;
+
+  real32 deltaTime;
 };
 
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
