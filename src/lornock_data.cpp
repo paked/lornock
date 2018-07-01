@@ -2,15 +2,12 @@
 #define WORLD_HEIGHT 3
 #define WORLD_DEPTH 3
 
+#include <state.h>
+
 struct LornockData {
   Assets assets;
 
-  real32 progress;
-
-  uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
-  uint64 vertCount;
-
-  GLuint VAO, VBO, EBO;
+  State state;
 }* lornockData = 0;
 
 #define assetsRequestShader(i) lornockData->assets.shaderRequests[i]++
