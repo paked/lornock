@@ -12,4 +12,5 @@ typedef hmm_m4 mat4;
 #define mat4Orthographic(left, right, bottom, top, near, far) HMM_Orthographic(left, right, bottom, top, near, far)
 
 #define mat4Translate(m, v) HMM_Multiply(m, HMM_Translate(v))
+#define mat4Scale(m, v) HMM_Multiply(m, HMM_Scale(v))
 #define mat4Rotate(m, a, v) HMM_Multiply(m, HMM_Rotate(a, v))

@@ -5,6 +5,8 @@
 struct LornockData {
   Assets assets;
 
+  real32 progress;
+
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   uint64 vertCount;
 
