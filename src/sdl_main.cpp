@@ -32,6 +32,22 @@ SDL_GLContext glContext;
 LornockMemory lornockMemory = {0};
 Platform platform = {0};
 
+// Key conversion
+uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
+  uint32 key = KEY_unknown;
+  uint32 scancode = event.keysym.scancode;
+
+  if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
+    key = KEY_a + (scancode - SDL_SCANCODE_A);
+  }
+
+  if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {
+    key = KEY_0 + (scancode - SDL_SCANCODE_1);
+  }
+
+  return key;
+}
+
 // File IO
 void linuxLoadFromFile(const char* path, void** data, uint32* len) {
   *data = 0;
@@ -236,9 +252,34 @@ int main(void) {
 
   SDL_Event event;
   while (!platform.quit) {
+    // Copy "now" key state into the last key state buffer, and reset the new key state
+    for (uint32 i = 0; i < MAX_KEY; i++) {
+      platform.keyStateLast[i] = platform.keyStateNow[i];
+    }
+
     uint64 timeFrameStart = SDL_GetPerformanceCounter();
 
     while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_QUIT:
+          {
+            platform.quit = true;
+          } break;
+        case SDL_KEYUP:
+        case SDL_KEYDOWN:
+          {
+            uint32 key = keySDLToPlatform(event.key);
+
+            if (key == KEY_unknown) {
+              logln("Could not identify key!");
+
+              break;
+            }
+
+            platform.keyStateNow[key] = event.key.state == SDL_PRESSED;
+          } break;
+      }
+
       if (event.type == SDL_QUIT) {
         platform.quit = true;
       }

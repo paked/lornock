@@ -194,6 +194,10 @@ extern "C" void lornockUpdate(LornockMemory* m) {
     m->initialized = true;
   }
 
+  if (keyDown(KEY_a)) {
+    logln("just pressed the 'a' key!");
+  }
+
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

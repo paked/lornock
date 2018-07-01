@@ -26,6 +26,43 @@ typedef float     real32;
 typedef double    real64;
 typedef int32     bool32;
 
+// TODO(harrison): Add in rest of keys!
+enum {
+  KEY_unknown,
+
+  KEY_0, KEY_1, KEY_2, KEY_3, KEY_4,
+  KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
+
+  KEY_a,
+  KEY_b,
+  KEY_c,
+  KEY_d,
+  KEY_e,
+  KEY_f,
+  KEY_g,
+  KEY_h,
+  KEY_i,
+  KEY_j,
+  KEY_k,
+  KEY_l,
+  KEY_m,
+  KEY_n,
+  KEY_o,
+  KEY_p,
+  KEY_q,
+  KEY_r,
+  KEY_s,
+  KEY_t,
+  KEY_u,
+  KEY_v,
+  KEY_w,
+  KEY_x,
+  KEY_y,
+  KEY_z,
+
+  MAX_KEY
+};
+
 struct LornockMemory {
   bool initialized;
 
@@ -48,6 +85,9 @@ struct Platform {
 
   bool quit;
 
+  bool keyStateNow[MAX_KEY];
+  bool keyStateLast[MAX_KEY];
+
   LoadFromFile loadFromFile;
   OpenGLLoadProc glLoadProc;
 
@@ -55,6 +95,11 @@ struct Platform {
 };
 
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
+
+#define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])
+#define keyJustUp(k) (!platform->keyStateNow[k] && platform->keyStateLast[k])
+#define keyDown(k) (platform->keyStateNow[k])
+#define keyUp(k) (!platform->keyStateNow[k])
 
 #define cubeMesh { \
      0.0f,  0.0f,  0.0f,  0.0f, 0.0f, /* back */ \
