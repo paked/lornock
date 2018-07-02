@@ -14,6 +14,12 @@
 #define megabytes(n) (kilobytes(n)*1024)
 #define gigabytes(n) (megabytes(n)*1024)
 
+#define PI  3.1415926535897
+#define PIf 3.1415926f
+
+#define rad2Deg(a) ((a) * (180/PIf))
+#define deg2Rad(a) ((a) * (PIf/180))
+
 typedef int8_t    int8;
 typedef int16_t   int16;
 typedef int32_t   int32;
@@ -91,9 +97,12 @@ struct Platform {
   LoadFromFile loadFromFile;
   OpenGLLoadProc glLoadProc;
 
+  // current time in ms
+  uint32 time;
   real32 deltaTime;
 };
 
+#define timeNow() platform->time
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
 
 #define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])

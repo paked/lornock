@@ -190,7 +190,7 @@ int main(void) {
       SDL_WINDOWPOS_UNDEFINED,
       WINDOW_WIDTH,
       WINDOW_HEIGHT,
-      SDL_WINDOW_OPENGL);
+      SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
 
   if (!window) {
     logln("ERROR: Could not create SDL window");
@@ -217,6 +217,7 @@ int main(void) {
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
   platform.loadFromFile = linuxLoadFromFile;
+  platform.time = 0;
   platform.deltaTime = 1/platform.fps;
 
   // Set up memory
@@ -252,6 +253,8 @@ int main(void) {
 
   SDL_Event event;
   while (!platform.quit) {
+    platform.time = SDL_GetTicks();
+
     // Copy "now" key state into the last key state buffer, and reset the new key state
     for (uint32 i = 0; i < MAX_KEY; i++) {
       platform.keyStateLast[i] = platform.keyStateNow[i];

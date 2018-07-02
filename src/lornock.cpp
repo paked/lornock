@@ -1,5 +1,5 @@
 // External libraries
-// NONE
+#include <math.h>
 
 // Vendored libraries
 #include <glad/glad.h>

@@ -156,20 +156,27 @@ void gameStateInit(State* state) {
 void gameStateUpdate(State* state) {
   GameState* g = (GameState*) state->memory;
 
-  if (keyDown(KEY_a)) {
-    logln("just pressed the 'a' key!");
-  }
-
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glUseProgram(shader(SHADER_default).id);
 
+  vec3 asteroidPosition = vec3(0, 0, 0);
+  vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
+
+  vec3 cameraPosition = vec3(0.0f, 0.0f, -7.0f);
+
   mat4 model = mat4d(1);
-  model = mat4Scale(model, vec3(1, 1, 1));
+  model = mat4Translate(model, asteroidPosition + asteroidOffset);
+
+  vec3 dir = vec3Normalize(cameraPosition - asteroidPosition);
+
   mat4 view = mat4d(1);
-  view = mat4Rotate(view, 50.0f, vec3(1, 0, 0));
-  view = mat4Translate(view, vec3(-1.5f, -6.0f, -4.75f));
+  real32 deg;
+  // replace with: https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Arcball
+  view = mat4Translate(view, cameraPosition);
+  view = mat4Rotate(view, deg2Rad(timeNow()*10), vec3(1, 0, 0));
+
   mat4 projection = mat4Perspective(70.0f, 640.0f/480.0f, 0.1f, 10000.0f);
 
   shaderSetMatrix(&shader(SHADER_default), "model", model);

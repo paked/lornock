@@ -10,7 +10,10 @@ typedef hmm_m4 mat4;
 
 #define mat4Perspective(fov, ratio, near, far) HMM_Perspective(fov, ratio, near, far)
 #define mat4Orthographic(left, right, bottom, top, near, far) HMM_Orthographic(left, right, bottom, top, near, far)
+#define mat4LookAt(m, eye, target) HMM_Multiply(m, HMM_LookAt(eye, target, vec3(0, 1, 0)))
 
 #define mat4Translate(m, v) HMM_Multiply(m, HMM_Translate(v))
 #define mat4Scale(m, v) HMM_Multiply(m, HMM_Scale(v))
 #define mat4Rotate(m, a, v) HMM_Multiply(m, HMM_Rotate(a, v))
+
+#define vec3Normalize(v) HMM_NormalizeVec3(v)
