@@ -39,6 +39,8 @@ enum {
   KEY_0, KEY_1, KEY_2, KEY_3, KEY_4,
   KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
 
+  KEY_shift,
+
   KEY_a,
   KEY_b,
   KEY_c,
@@ -102,7 +104,9 @@ struct Platform {
   real32 deltaTime;
 };
 
-#define timeNow() platform->time
+#define getTime() platform->time
+#define getDt() platform->deltaTime
+
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
 
 #define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])

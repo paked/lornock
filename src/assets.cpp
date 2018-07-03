@@ -13,7 +13,7 @@ enum {
 };
 
 const char* shaderFilenames[MAX_SHADER] = {
-#define shader(name) #name
+#define shader(name) #name,
 #include <assets_shaders.cpp>
 #undef shader
 };
@@ -24,14 +24,14 @@ const char* shaderFilename(uint32 i) {
   return shaderFilenames[i];
 }
 
-const char* textureFilenames[MAX_SHADER] = {
-#define texture(name) #name
+const char* textureFilenames[MAX_TEXTURE] = {
+#define texture(name) #name,
 #include <assets_textures.cpp>
 #undef texture
 };
 
 const char* textureFilename(uint32 i) {
-  dbg_assert(i >= 0 && i < MAX_SHADER);
+  dbg_assert(i >= 0 && i < MAX_TEXTURE);
 
   return textureFilenames[i];
 }
@@ -159,12 +159,38 @@ Shader shaderLoad(const char* name) {
 bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
-    logln("ERROR: find uniform location");
+    logfln("ERROR: find uniform location %s", name);
 
     return false;
   }
 
   glUniformMatrix4fv(loc, 1, GL_FALSE, &m.Elements[0][0]);
+
+  return true;
+}
+
+bool shaderSetVec3(Shader* shader, const char* name, vec3 v) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logfln("ERROR: find uniform location %s", name);
+
+    return false;
+  }
+
+  glUniform3f(loc, v.x, v.y, v.z);
+
+  return true;
+}
+
+bool shaderSetVec2(Shader* shader, const char* name, vec2 v) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logfln("ERROR: find uniform location %s", name);
+
+    return false;
+  }
+
+  glUniform2f(loc, v.x, v.y);
 
   return true;
 }

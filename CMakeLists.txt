@@ -53,7 +53,10 @@ include_directories(
 set(DATA_FILES
     data/shaders/default.vert
     data/shaders/default.frag
+    data/shaders/billboard.vert
+    data/shaders/billboard.frag
 
+    data/img/player.png
     data/img/test.png)
 
 foreach(DATA_FILE ${DATA_FILES})

@@ -45,6 +45,8 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   lornockData = (LornockData*) m->permanentStorage;
 
   if (!m->initialized) {
+    stbi_set_flip_vertically_on_load(true);
+
     stateInit(&lornockData->state, STATE_game);
 
     // Refresh assets
@@ -52,8 +54,10 @@ extern "C" void lornockUpdate(LornockMemory* m) {
 
     // TODO: refactor into drawInit or something
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
     // TODO(harrison): pull from platform layer
     glViewport(0, 0, 640, 480);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m->initialized = true;
   }

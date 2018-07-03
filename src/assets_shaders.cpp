@@ -1,1 +1,2 @@
 shader(default)
+shader(billboard)

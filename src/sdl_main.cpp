@@ -37,11 +37,11 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
   uint32 key = KEY_unknown;
   uint32 scancode = event.keysym.scancode;
 
-  if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
+  if (scancode == SDL_SCANCODE_LSHIFT) {
+    key = KEY_shift;
+  } else if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
     key = KEY_a + (scancode - SDL_SCANCODE_A);
-  }
-
-  if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {
+  } else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {
     key = KEY_0 + (scancode - SDL_SCANCODE_1);
   }
 

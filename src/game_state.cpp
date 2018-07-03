@@ -49,9 +49,15 @@ uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
 
 struct GameState {
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
-  uint64 vertCount;
 
-  GLuint VAO, VBO, EBO;
+  uint64 asteroidVertCount;
+  GLuint asteroidVAO;
+  GLuint asteroidVBO;
+
+  GLuint playerVAO;
+  GLuint playerVBO;
+
+  vec3 playerPosition;
 
   uint32 currentFace;
 
@@ -139,9 +145,10 @@ void gameStateInit(State* state) {
   GameState* g = (GameState*) state->memory;
 
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
+  g->playerPosition = vec3(0, 0, 1.51f);
 
   g->rotState = ROT_IDLE;
-  g->rotStartTime = timeNow();
+  g->rotStartTime = getTime();
 
   g->currentFace = FRONT;
 
@@ -177,17 +184,17 @@ void gameStateInit(State* state) {
     }
   }
 
-  g->vertCount = count;
+  g->asteroidVertCount = count;
 
-  // Init VBO, EBO, and VAO.
-  GLuint VBO, EBO, VAO;
-  glGenVertexArrays(1, &VAO);
+  GLuint asteroidVAO;
+  GLuint asteroidVBO;
+  glGenVertexArrays(1, &asteroidVAO);
 
-  glGenBuffers(1, &VBO);
+  glGenBuffers(1, &asteroidVBO);
 
-  glBindVertexArray(VAO);
+  glBindVertexArray(asteroidVAO);
 
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBindBuffer(GL_ARRAY_BUFFER, asteroidVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * count, verts, GL_STATIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
@@ -195,12 +202,41 @@ void gameStateInit(State* state) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  g->VAO = VAO;
-  g->VBO = VBO;
+  g->asteroidVAO = asteroidVAO;
+  g->asteroidVBO = asteroidVBO;
+
+  // Player
+  real32 quadData[] = {
+    // Verts    UVs
+    0, 0, 0,    0, 0,
+    0, 1, 0,    0, 1,
+    1, 0, 0,    1, 0,
+    1, 1, 0,    1, 1
+  };
+
+  GLuint playerVAO, playerVBO;
+
+  glGenVertexArrays(1, &playerVAO);
+  glBindVertexArray(playerVAO);
+
+  glGenBuffers(1, &playerVBO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, playerVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadData), quadData, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+
+  g->playerVAO = playerVAO;
+  g->playerVBO = playerVBO;
 
   // Asset requests
   assetsRequestShader(SHADER_default);
+  assetsRequestShader(SHADER_billboard);
   assetsRequestTexture(TEXTURE_test);
+  assetsRequestTexture(TEXTURE_player);
 }
 
 void gameStateUpdate(State* state) {
@@ -236,7 +272,7 @@ void gameStateUpdate(State* state) {
 
         if (starting) {
           g->rotStart = g->cameraRotation;
-          g->rotStartTime = timeNow();       
+          g->rotStartTime = getTime();
         }
 
         break;
@@ -260,9 +296,9 @@ void gameStateUpdate(State* state) {
   }
 
   if (g->rotState != ROT_IDLE) {
-    real32 pc = 1.0f - ((float) ((g->rotStartTime + ROTATION_DURATION) - timeNow())) / ROTATION_DURATION;
+    real32 pc = 1.0f - ((float) ((g->rotStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
 
-    if (timeNow() > g->rotStartTime + ROTATION_DURATION) {
+    if (getTime() > g->rotStartTime + ROTATION_DURATION) {
       pc = 1.0f;
 
       printFace(g->currentFace);
@@ -272,7 +308,7 @@ void gameStateUpdate(State* state) {
       g->rotState = ROT_IDLE;
     }
 
-    real32 amount = deg2Rad(90) * pc;
+    real32 amount = deg2Rad(90.0f) * pc;
 
     quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
 
@@ -285,14 +321,7 @@ void gameStateUpdate(State* state) {
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glUseProgram(shader(SHADER_default).id);
-
-  vec3 asteroidPosition = vec3(0, 0, 0);
-  vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
   vec3 cameraPosition = vec3(0.0f, 0.0f, -7.0f);
-
-  mat4 model = mat4d(1);
-  model = mat4Translate(model, asteroidPosition + asteroidOffset);
 
   mat4 view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
@@ -300,11 +329,46 @@ void gameStateUpdate(State* state) {
 
   mat4 projection = mat4Perspective(70.0f, 640.0f/480.0f, 0.1f, 10000.0f);
 
-  shaderSetMatrix(&shader(SHADER_default), "model", model);
-  shaderSetMatrix(&shader(SHADER_default), "view", view);
-  shaderSetMatrix(&shader(SHADER_default), "projection", projection);
+  {
+    vec3 asteroidPosition = vec3(0, 0, 0);
+    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
 
-  glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_test).id);
-  glBindVertexArray(g->VAO);
-  glDrawArrays(GL_TRIANGLES, 0, g->vertCount);
+    mat4 model = mat4d(1);
+    model = mat4Translate(model, asteroidPosition + asteroidOffset);
+
+    glUseProgram(shader(SHADER_default).id);
+
+    shaderSetMatrix(&shader(SHADER_default), "model", model);
+    shaderSetMatrix(&shader(SHADER_default), "view", view);
+    shaderSetMatrix(&shader(SHADER_default), "projection", projection);
+
+    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_test).id);
+    glBindVertexArray(g->asteroidVAO);
+    glDrawArrays(GL_TRIANGLES, 0, g->asteroidVertCount);
+  }
+
+  {
+    Shader s = shader(SHADER_billboard);
+    Texture t = texture(TEXTURE_player);
+
+    real32 aspectRatio = ((real32)t.w/(real32)t.h);
+
+    vec3 cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
+    vec3 cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
+
+    glUseProgram(s.id);
+
+    shaderSetMatrix(&s, "view", view);
+    shaderSetMatrix(&s, "projection", projection);
+
+    shaderSetVec3(&s, "cameraRight", cameraRight);
+    shaderSetVec3(&s, "cameraUp", cameraUp);
+    shaderSetVec3(&s, "billboardPos", g->playerPosition);
+    shaderSetVec2(&s, "billboardSize", vec2(1, 1.8)/2);
+
+    glBindTexture(GL_TEXTURE_2D, t.id);
+    glBindVertexArray(g->playerVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  }
 }

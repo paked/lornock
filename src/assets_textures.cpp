@@ -1,1 +1,2 @@
 texture(test)
+texture(player)
