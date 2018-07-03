@@ -57,6 +57,8 @@ struct GameState {
   GLuint playerVAO;
   GLuint playerVBO;
 
+  vec3 cameraUp;
+  vec3 cameraRight;
   vec3 playerPosition;
 
   uint32 currentFace;
@@ -144,6 +146,7 @@ void gameStateInit(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
+  g->cameraUp = g->cameraRight = {0};
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
   g->playerPosition = vec3(0, 0, 1.51f);
 
@@ -243,6 +246,31 @@ void gameStateUpdate(State* state) {
   GameState* g = (GameState*) state->memory;
 
   /* updating */
+  if (keyUp(KEY_shift)) {
+    vec3 up = g->cameraUp;
+    vec3 right = g->cameraRight;
+    vec3 movement = vec3(0, 0, 0);
+
+    float speed = 2;
+
+    if (keyDown(KEY_w)) {
+      movement += up * speed * getDt();
+    }
+
+    if (keyDown(KEY_s)) {
+      movement -= up * speed * getDt();
+    }
+
+    if (keyDown(KEY_d)) {
+      movement += right * speed * getDt();
+    }
+
+    if (keyDown(KEY_a)) {
+      movement -= right * speed * getDt();
+    }
+
+    g->playerPosition += movement;
+  }
 
   real32 rollFactor = 0;
   real32 pitchFactor = 0;
@@ -251,6 +279,10 @@ void gameStateUpdate(State* state) {
   switch (g->rotState) {
     case ROT_IDLE:
       {
+        if (!keyDown(KEY_shift)) {
+          break;
+        }
+
         bool starting = false;
         if (keyJustDown(KEY_w)) {
           g->rotState = ROT_FORWARD;
@@ -351,18 +383,17 @@ void gameStateUpdate(State* state) {
     Shader s = shader(SHADER_billboard);
     Texture t = texture(TEXTURE_player);
 
-    real32 aspectRatio = ((real32)t.w/(real32)t.h);
-
-    vec3 cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
-    vec3 cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
+    // TODO(harrison): refactor these out to somewhere else (camera struct?)
+    g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
+    g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
 
     glUseProgram(s.id);
 
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
-    shaderSetVec3(&s, "cameraRight", cameraRight);
-    shaderSetVec3(&s, "cameraUp", cameraUp);
+    shaderSetVec3(&s, "cameraRight", g->cameraRight);
+    shaderSetVec3(&s, "cameraUp", g->cameraUp);
     shaderSetVec3(&s, "billboardPos", g->playerPosition);
     shaderSetVec2(&s, "billboardSize", vec2(1, 1.8)/2);
 
