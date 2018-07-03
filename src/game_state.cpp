@@ -9,16 +9,43 @@ enum {
   MAX_FACE
 };
 
-// Rotation states
+void printFace(uint32 f) {
+  switch(f) {
+    case BACK:
+      { logln("back face"); } break;
+    case FRONT:
+      { logln("front face"); } break;
+    case LEFT:
+      { logln("left face"); } break;
+    case RIGHT:
+      { logln("right face"); } break;
+    case BOTTOM:
+      { logln("bottom face"); } break;
+    case TOP:
+      { logln("top face"); } break;
+    default:
+      { logln("unknown face"); } break;
+  }
+}
+
+#define ROTATION_DURATION 500
 enum {
-  ROT_IDLE,
   ROT_FORWARD,
   ROT_BACKWARD,
   ROT_LEFT,
-  ROT_RIGHT
+  ROT_RIGHT,
+  ROT_IDLE
 };
 
-#define ROTATION_DURATION 500
+uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
+  //  FWD     BWD     LWD     RWD
+  {   BOTTOM, TOP,    LEFT,   RIGHT },  // Back face
+  {   TOP,    BOTTOM, LEFT,   RIGHT },  // Front face
+  {   TOP,    BOTTOM, BACK,   FRONT },  // Left face
+  {   TOP,    BOTTOM, FRONT,  BACK  },  // Right face
+  {   FRONT,  BACK,   LEFT,   RIGHT },  // Bottom face
+  {   BACK,   FRONT,  LEFT,   RIGHT }   // Top face
+};
 
 struct GameState {
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
@@ -26,10 +53,10 @@ struct GameState {
 
   GLuint VAO, VBO, EBO;
 
+  uint32 currentFace;
+
   quat cameraRotation;
 
-  vec3 rotFBUp;
-  vec3 rotLRUp;
   quat rotStart;
   uint32 rotState;
   uint32 rotStartTime;
@@ -113,11 +140,10 @@ void gameStateInit(State* state) {
 
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
 
-  g->rotFBUp = vec3(1, 0, 0);
-  g->rotLRUp = vec3(0, 1, 0);
-
   g->rotState = ROT_IDLE;
   g->rotStartTime = timeNow();
+
+  g->currentFace = FRONT;
 
   // init world
   for (int y = 0; y < WORLD_HEIGHT; y++) {
@@ -238,6 +264,11 @@ void gameStateUpdate(State* state) {
 
     if (timeNow() > g->rotStartTime + ROTATION_DURATION) {
       pc = 1.0f;
+
+      printFace(g->currentFace);
+      g->currentFace = faceRotationMap[g->currentFace][g->rotState];
+      printFace(g->currentFace);
+
       g->rotState = ROT_IDLE;
     }
 
