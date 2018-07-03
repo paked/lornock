@@ -24,8 +24,6 @@ struct GameState {
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   uint64 vertCount;
 
-  int64 progress;
-
   GLuint VAO, VBO, EBO;
 
   quat cameraRotation;
@@ -174,8 +172,6 @@ void gameStateInit(State* state) {
   g->VAO = VAO;
   g->VBO = VBO;
 
-  g->progress = 0;
-
   // Asset requests
   assetsRequestShader(SHADER_default);
   assetsRequestTexture(TEXTURE_test);
@@ -186,10 +182,9 @@ void gameStateUpdate(State* state) {
 
   /* updating */
 
-  int32 rotDir = 1;
-  real32 rotation = 0;
-
-  vec3 up = vec3(0.0f, 0.0f, 0.0f);
+  real32 rollFactor = 0;
+  real32 pitchFactor = 0;
+  real32 yawFactor = 0;
 
   switch (g->rotState) {
     case ROT_IDLE:
@@ -208,7 +203,7 @@ void gameStateUpdate(State* state) {
           
           starting = true;
         } else if (keyJustDown(KEY_d)) {
-          g->rotState = ROT_LEFT;
+          g->rotState = ROT_RIGHT;
 
           starting = true;
         }
@@ -222,60 +217,37 @@ void gameStateUpdate(State* state) {
       }
     case ROT_FORWARD:
       {
-        up = g->rotFBUp;
-        rotDir = 1;
+        rollFactor = 1.0;
       } break;
     case ROT_BACKWARD:
       {
-        up = g->rotFBUp;
-        rotDir = -1;
+        rollFactor = -1.0;
       } break;
     case ROT_LEFT:
       {
-        up = g->rotLRUp;
-        rotDir = 1;
+        pitchFactor = 1.0;
       } break;
     case ROT_RIGHT:
       {
-        up = g->rotLRUp;
-        rotDir = -1;
+        pitchFactor = -1.0;
       } break;
   }
 
-  if (!g->rotState == ROT_IDLE) {
-    if (g->rotStartTime + ROTATION_DURATION < timeNow()) {
+  if (g->rotState != ROT_IDLE) {
+    real32 pc = 1.0f - ((float) ((g->rotStartTime + ROTATION_DURATION) - timeNow())) / ROTATION_DURATION;
+
+    if (timeNow() > g->rotStartTime + ROTATION_DURATION) {
+      pc = 1.0f;
       g->rotState = ROT_IDLE;
-
-      /*
-
-      vec4 fb4 = vec4(g->rotFBUp.x, g->rotFBUp.y, g->rotFBUp.z, 0);
-      vec4 lr4 = vec4(g->rotLRUp.x, g->rotLRUp.y, g->rotLRUp.z, 0);
-
-      vec4 fb = vec4Normalize(mat4Rotate(mat4d(1.0f), deg2Rad(90 * rotDir), up) * fb4);
-      g->rotFBUp = vec3(fb.x, fb.y, fb.z);
-
-      vec4 lr = vec4Normalize(mat4Rotate(mat4d(1.0f), deg2Rad(90 * rotDir), up) * lr4);
-      g->rotLRUp = vec3(lr.x, lr.y, lr.z);
-
-      logfln("%f %f %f", g->rotLRUp.x, g->rotLRUp.y, g->rotLRUp.z);*/
-    } else {
-      real32 start = 0;
-      real32 end = 90;
-
-      real32 pc = 1.0f - ((float) ((g->rotStartTime + ROTATION_DURATION) - timeNow())) / ROTATION_DURATION;
-      logfln("%f", pc);
-
-      rotation = pc * end;
-
-      quat rot = quatFromAxisAngle(up, deg2Rad(rotation * rotDir));
-
-      g->cameraRotation = g->rotStart * rot;
     }
-  }
 
-  /*
-  quat diff = quatFromAxisAngle(vec3(0, 1, 0), deg2Rad(10.f));
-  g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), deg2Rad(rotation)) * diff;*/
+    real32 amount = deg2Rad(90) * pc;
+
+    quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
+
+    g->cameraRotation = deltaRot * g->rotStart;
+    g->cameraRotation = quatNormalize(g->cameraRotation);
+  }
 
   /* drawing */
 
@@ -286,21 +258,14 @@ void gameStateUpdate(State* state) {
 
   vec3 asteroidPosition = vec3(0, 0, 0);
   vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
-
   vec3 cameraPosition = vec3(0.0f, 0.0f, -7.0f);
 
   mat4 model = mat4d(1);
   model = mat4Translate(model, asteroidPosition + asteroidOffset);
 
-  vec3 dir = vec3Normalize(cameraPosition - asteroidPosition);
-
-  mat4 rotMat4 = quatToMat4(g->cameraRotation);
-
   mat4 view = mat4d(1);
-  real32 deg;
-  // TODO(harrison): replace with: https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_Arcball
   view = mat4Translate(view, cameraPosition);
-  view = view * rotMat4;
+  view = view * quatToMat4(g->cameraRotation);
 
   mat4 projection = mat4Perspective(70.0f, 640.0f/480.0f, 0.1f, 10000.0f);
 
@@ -311,6 +276,4 @@ void gameStateUpdate(State* state) {
   glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_test).id);
   glBindVertexArray(g->VAO);
   glDrawArrays(GL_TRIANGLES, 0, g->vertCount);
-
-  g->progress++;
 }

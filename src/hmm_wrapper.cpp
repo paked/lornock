@@ -9,8 +9,8 @@ typedef hmm_quaternion quat;
 #define vec4(x, y, z, w)  HMM_Vec4(x, y, z, w)
 #define mat4d(d) HMM_Mat4d(d)
 
+#define quatNormalize(q) HMM_NormalizeQuaternion(q)
 #define quatToMat4(q) HMM_QuaternionToMat4(q)
-
 #define quatFromAxisAngle(axis, angle) HMM_QuaternionFromAxisAngle(axis, angle)
 
 #define mat4Perspective(fov, ratio, near, far) HMM_Perspective(fov, ratio, near, far)
@@ -23,3 +23,22 @@ typedef hmm_quaternion quat;
 
 #define vec3Normalize(v) HMM_NormalizeVec3(v)
 #define vec4Normalize(v) HMM_NormalizeVec4(v)
+
+quat quatFromPitchYawRoll(real64 roll, real64 pitch, real64 yaw) {
+	quat q = {0};
+
+	// Abbreviations for the various angular functions
+	real64 cy = cos(yaw * 0.5);
+	real64 sy = sin(yaw * 0.5);
+	real64 cr = cos(roll * 0.5);
+	real64 sr = sin(roll * 0.5);
+	real64 cp = cos(pitch * 0.5);
+	real64 sp = sin(pitch * 0.5);
+
+	q.W = cy * cr * cp + sy * sr * sp;
+	q.X = cy * sr * cp - sy * cr * sp;
+	q.Y = cy * cr * sp + sy * sr * cp;
+	q.Z = sy * cr * cp - cy * sr * sp;
+
+	return q;
+}
