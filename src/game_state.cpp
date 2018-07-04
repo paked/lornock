@@ -391,21 +391,18 @@ void gameStateUpdate(State* state) {
     Shader s = shader(SHADER_billboard);
     Texture t = texture(TEXTURE_player);
 
-    // TODO(harrison): refactor these out to somewhere else (camera struct?)
-    /*g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
-    g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);*/
-
     glUseProgram(s.id);
 
+    vec2 playerSize = vec2(1.0, 1.8)/2;
+
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(mat4d(1), g->playerPosition);
+
+    shaderSetMatrix(&s, "model", model);
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
-    vec2 playerSize = vec2(t.w/20.0f, t.h/20.0f);
-
-    shaderSetVec3(&s, "cameraRight", g->cameraRight);
-    shaderSetVec3(&s, "cameraUp", g->cameraUp);
-    shaderSetVec3(&s, "billboardPos", g->playerPosition);
-    shaderSetVec2(&s, "billboardSize", playerSize);
+    shaderSetVec2(&s, "scale", playerSize);
 
     glBindTexture(GL_TEXTURE_2D, t.id);
     glBindVertexArray(g->playerVAO);
