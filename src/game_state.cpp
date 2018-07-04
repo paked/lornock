@@ -346,7 +346,7 @@ void gameStateUpdate(State* state) {
 
     quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
 
-    g->cameraRotation = g->rotStart * deltaRot;
+    g->cameraRotation = deltaRot * g->rotStart;
     g->cameraRotation = quatNormalize(g->cameraRotation);
   }
 
