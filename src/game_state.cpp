@@ -56,12 +56,13 @@ struct GameState {
   GLuint asteroidVAO;
   GLuint asteroidVBO;
 
+  vec3 playerPosition;
+  vec2 playerSize;
   GLuint playerVAO;
   GLuint playerVBO;
 
   vec3 cameraUp;
   vec3 cameraRight;
-  vec3 playerPosition;
 
   uint32 currentFace;
 
@@ -152,7 +153,9 @@ void gameStateInit(State* state) {
   g->cameraUp = g->cameraRight = {0};
   g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
-  g->playerPosition = vec3(0, 0, 1.51f);
+
+  g->playerSize = vec2(1.0, 1.8)/2;
+  g->playerPosition = vec3(-g->playerSize.x/2, -g->playerSize.y/2, 1.51f);
 
   g->rotState = ROT_IDLE;
   g->rotStartTime = getTime();
@@ -276,6 +279,10 @@ void gameStateUpdate(State* state) {
     g->playerPosition += movement;
   }
 
+  g->playerPosition.x = clamp(g->playerPosition.x, -1.5f, 1.5f);
+  g->playerPosition.y = clamp(g->playerPosition.y, -1.5f, 1.5f);
+  g->playerPosition.z = clamp(g->playerPosition.z, -1.5f, 1.5f);
+
   real32 rollFactor = 0;
   real32 pitchFactor = 0;
   real32 yawFactor = 0;
@@ -393,7 +400,6 @@ void gameStateUpdate(State* state) {
 
     glUseProgram(s.id);
 
-    vec2 playerSize = vec2(1.0, 1.8)/2;
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(mat4d(1), g->playerPosition);
@@ -402,7 +408,7 @@ void gameStateUpdate(State* state) {
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
-    shaderSetVec2(&s, "scale", playerSize);
+    shaderSetVec2(&s, "scale", g->playerSize);
 
     glBindTexture(GL_TEXTURE_2D, t.id);
     glBindVertexArray(g->playerVAO);

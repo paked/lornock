@@ -157,3 +157,13 @@ struct Platform {
      0.0f,  1.0f,  1.0f,  0.0f, 0.0f, \
      0.0f,  1.0f,  0.0f,  0.0f, 1.0f \
 }
+
+real32 clamp(real32 v, real32 min, real32 max) {
+  if (v < min) {
+    return min;
+  } else if (v > max) {
+    return max;
+  }
+
+  return v;
+}
