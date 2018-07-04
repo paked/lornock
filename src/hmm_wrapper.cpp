@@ -12,6 +12,7 @@ typedef hmm_quaternion quat;
 #define quatNormalize(q) HMM_NormalizeQuaternion(q)
 #define quatToMat4(q) HMM_QuaternionToMat4(q)
 #define quatFromAxisAngle(axis, angle) HMM_QuaternionFromAxisAngle(axis, angle)
+#define quatSlerp(l, t, r) HMM_Slerp(l, t, r)
 
 #define mat4Perspective(fov, ratio, near, far) HMM_Perspective(fov, ratio, near, far)
 #define mat4Orthographic(left, right, bottom, top, near, far) HMM_Orthographic(left, right, bottom, top, near, far)

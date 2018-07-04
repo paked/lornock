@@ -28,7 +28,7 @@ void printFace(uint32 f) {
   }
 }
 
-#define ROTATION_DURATION 500
+#define ROTATION_DURATION 400
 enum {
   ROT_FORWARD,
   ROT_BACKWARD,
@@ -47,6 +47,8 @@ uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
   {   BACK,   FRONT,  LEFT,   RIGHT }   // Top face
 };
 
+#define ROTATION_OFFSET deg2Rad(-30)
+
 struct GameState {
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
 
@@ -63,6 +65,7 @@ struct GameState {
 
   uint32 currentFace;
 
+  quat cameraOffset;
   quat cameraRotation;
 
   quat rotStart;
@@ -147,6 +150,7 @@ void gameStateInit(State* state) {
   GameState* g = (GameState*) state->memory;
 
   g->cameraUp = g->cameraRight = {0};
+  g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
   g->playerPosition = vec3(0, 0, 1.51f);
 
@@ -333,23 +337,20 @@ void gameStateUpdate(State* state) {
     if (getTime() > g->rotStartTime + ROTATION_DURATION) {
       pc = 1.0f;
 
-      printFace(g->currentFace);
       g->currentFace = faceRotationMap[g->currentFace][g->rotState];
-      printFace(g->currentFace);
 
       g->rotState = ROT_IDLE;
     }
 
-    real32 amount = deg2Rad(90.0f) * pc;
+    real32 amount = deg2Rad(90.0f) * (pc * pc);
 
     quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
 
-    g->cameraRotation = deltaRot * g->rotStart;
+    g->cameraRotation = g->rotStart * deltaRot;
     g->cameraRotation = quatNormalize(g->cameraRotation);
   }
 
   /* drawing */
-
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -358,6 +359,13 @@ void gameStateUpdate(State* state) {
   mat4 view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
   view = view * quatToMat4(g->cameraRotation);
+
+  g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
+  g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
+
+  view = mat4d(1);
+  view = mat4Translate(view, cameraPosition);
+  view = view * quatToMat4(g->cameraOffset * g->cameraRotation);
 
   mat4 projection = mat4Perspective(70.0f, 640.0f/480.0f, 0.1f, 10000.0f);
 
@@ -384,22 +392,23 @@ void gameStateUpdate(State* state) {
     Texture t = texture(TEXTURE_player);
 
     // TODO(harrison): refactor these out to somewhere else (camera struct?)
-    g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
-    g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
+    /*g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
+    g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);*/
 
     glUseProgram(s.id);
 
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
+    vec2 playerSize = vec2(t.w/20.0f, t.h/20.0f);
+
     shaderSetVec3(&s, "cameraRight", g->cameraRight);
     shaderSetVec3(&s, "cameraUp", g->cameraUp);
     shaderSetVec3(&s, "billboardPos", g->playerPosition);
-    shaderSetVec2(&s, "billboardSize", vec2(1, 1.8)/2);
+    shaderSetVec2(&s, "billboardSize", playerSize);
 
     glBindTexture(GL_TEXTURE_2D, t.id);
     glBindVertexArray(g->playerVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
   }
 }
