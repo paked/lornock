@@ -41,7 +41,7 @@ enum {
   KEY_0, KEY_1, KEY_2, KEY_3, KEY_4,
   KEY_5, KEY_6, KEY_7, KEY_8, KEY_9,
 
-  KEY_shift,
+  KEY_shift, KEY_grave, KEY_ctrl,
 
   KEY_a,
   KEY_b,
@@ -103,6 +103,7 @@ struct Platform {
 
   uint32 windowWidth;
   uint32 windowHeight;
+  bool fullscreen;
 
   // current time in ms
   uint32 time;

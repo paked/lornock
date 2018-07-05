@@ -38,8 +38,8 @@ GameLibInitFunction gameLibInitFunction;
 
 // Config
 #define WINDOW_NAME "Lornock"
-#define WINDOW_WIDTH 1920/2
-#define WINDOW_HEIGHT 1080/2
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
 #define WINDOW_FULLSCREEN false
 
 // Globals
@@ -49,6 +49,12 @@ SDL_GLContext glContext;
 LornockMemory lornockMemory = {0};
 Platform platform = {0};
 
+void toggleFullscreen() {
+  if (SDL_SetWindowFullscreen(window, platform.fullscreen ? 0 : SDL_WINDOW_FULLSCREEN) != 0) {
+    logfln("ERROR: Could not toggle window fullscreen: %s", SDL_GetError());
+  }
+}
+
 // Key conversion
 uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
   uint32 key = KEY_unknown;
@@ -56,6 +62,10 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
 
   if (scancode == SDL_SCANCODE_LSHIFT) {
     key = KEY_shift;
+  } else if (scancode == SDL_SCANCODE_GRAVE) {
+    key = KEY_grave;
+  } else if (scancode == SDL_SCANCODE_LCTRL) {
+    key = KEY_ctrl;
   } else if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
     key = KEY_a + (scancode - SDL_SCANCODE_A);
   } else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {
@@ -196,6 +206,11 @@ int main(void) {
       }
     }
 
+    if ((platform.keyStateNow[KEY_grave] && !platform.keyStateLast[KEY_grave])) {
+      logln("Toggling fullscreen...");
+      toggleFullscreen();
+    }
+
     // TODO(harrison): only reload code in debug mode
     if (LIB_NEEDS_RELOADING_FUNC()) {
       bool ok = LIB_RELOAD_FUNC();
@@ -212,6 +227,7 @@ int main(void) {
         }
       }
     }
+
     if (LIB_IS_VALID_FUNC()) {
       gameLibUpdateFunction(&lornockMemory);
     }
