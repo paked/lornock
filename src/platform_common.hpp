@@ -85,8 +85,8 @@ struct LornockMemory {
 #define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 2)
 #define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
 
-typedef void* (* OpenGLLoadProc)(const char *name);
-typedef void (* LoadFromFile)(const char *path, void** data, uint32* len);
+typedef void* (* OpenGLLoadProcFunc)(const char *name);
+typedef void (* LoadFromFileFunc)(const char *path, void** data, uint32* len);
 
 struct Platform {
   int fps;
@@ -96,8 +96,8 @@ struct Platform {
   bool keyStateNow[MAX_KEY];
   bool keyStateLast[MAX_KEY];
 
-  LoadFromFile loadFromFile;
-  OpenGLLoadProc glLoadProc;
+  LoadFromFileFunc loadFromFile;
+  OpenGLLoadProcFunc glLoadProc;
 
   // current time in ms
   uint32 time;

@@ -6,19 +6,35 @@
  */
 
 // Include external libraries
-#include <sys/mman.h> // mmap
-#include <sys/stat.h> // stat
-#include <dlfcn.h> // dlopen,dlsym
-#include <unistd.h> // pread
-#include <fcntl.h>
-#include <errno.h>
-
 #include <SDL.h>
 
 // Include internal libraries
 
 // Include common
 #include <platform_common.hpp>
+
+typedef void (*GameLibUpdateFunction)(LornockMemory*);
+GameLibUpdateFunction gameLibUpdateFunction;
+typedef int (*GameLibInitFunction)(Platform*);
+GameLibInitFunction gameLibInitFunction;
+
+// Include platform code
+#ifdef __linux__
+#include <sdl_linux.cpp>
+
+#define ALLOCATE_MEMORY_FUNC linux_allocateMemory
+#define LOAD_FROM_FILE_FUNC linux_loadFromFile
+#define LIB_NEEDS_RELOADING_FUNC linux_libNeedsReloading
+#define LIB_RELOAD_FUNC linux_libReload
+#define LIB_IS_VALID_FUNC linux_libIsValid
+#define LIB_EXISTS_FUNC linux_libExists
+
+#elif _WIN32
+#include <sdl_win32.cpp>
+
+#else
+// TODO(harrison): This platform is not supported!
+#endif
 
 // Config
 #define WINDOW_NAME "Lornock"
@@ -46,128 +62,6 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
   }
 
   return key;
-}
-
-// File IO
-void linuxLoadFromFile(const char* path, void** data, uint32* len) {
-  *data = 0;
-  *len = 0;
-
-  struct stat attr;
-
-  if (stat(path, &attr) != 0) {
-    logfln("ERROR: failed to find file: %s", path);
-    return;
-  }
-
-  int64 readSizeExpected = attr.st_size;
-
-  int fd = open(path, O_RDONLY);
-  if (fd == -1) {
-    logfln("ERROR: unable to open file. fd: %d", fd);
-  }
-
-  void* readData = mmap(0, readSizeExpected, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-  int64 readSizeGot = read(fd, readData, readSizeExpected);
-
-  if (readSizeGot != readSizeExpected) {
-    logfln("ERROR: could not read file (read: %zd wanted: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
-  }
-
-  *data = readData;
-  *len = (uint32) readSizeExpected;
-
-  close(fd);
-}
-
-// Hot reloading
-// TODO(harrison): Refactor this out into a separate platform_linux.h (and create a platform_win32.h)
-const char* gameLibPath = "./liblornock.so";
-
-bool gameLibValid = false;
-time_t gameLibFileTime;
-void* gameLibHandle = 0;
-
-typedef void (*GameLibUpdateFunction)(LornockMemory*);
-GameLibUpdateFunction gameLibUpdateFunction;
-typedef int (*GameLibInitFunction)(Platform*);
-GameLibInitFunction gameLibInitFunction;
-
-ino_t getFileID(const char *fname) {
-  struct stat attr;
-
-  if (stat(fname, &attr) != 0) {
-    logfln("ERROR: Can't get file ID of '%s'", fname);
-
-    attr.st_ino = 0;
-  }
-
-  return attr.st_ino;
-}
-
-time_t getFileTime(const char *fname) {
-  struct stat attr;
-
-  if (stat(fname, &attr) != 0) {
-    logfln("ERROR: Can't get file ID of '%s'", fname);
-
-    attr.st_mtime = 0;
-  }
-
-  return attr.st_mtime;
-}
-
-bool gameLibNeedsToReload() {
-  return getFileTime(gameLibPath) > gameLibFileTime;
-}
-
-void gameLibUnload() {
-  if (gameLibHandle == 0) {
-    return;
-  }
-
-  dlclose(gameLibHandle);
-
-  gameLibValid = false;
-  gameLibHandle = 0;
-  gameLibFileTime = 0;
-}
-
-bool gameLibLoad() {
-  if (gameLibHandle != 0) {
-    SDL_Delay(200);
-    gameLibUnload();
-  }
-
-  gameLibHandle = dlopen(gameLibPath, RTLD_NOW | RTLD_LOCAL);
-
-  if (gameLibHandle == 0) {
-    logln("ERROR: Cannot load game liblornock");
-
-    return false;
-  }
-
-  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(gameLibHandle, "lornockUpdate");
-
-  if (!gameLibUpdateFunction) {
-    logln("ERROR: Could not find update function");
-
-    return false;
-  }
-
-  gameLibInitFunction = (GameLibInitFunction) dlsym(gameLibHandle, "lornockInit");
-
-  if (!gameLibUpdateFunction) {
-    logln("ERROR: Could not find init function");
-
-    return false;
-  }
-
-  gameLibValid = true;
-  gameLibFileTime = getFileTime(gameLibPath);
-
-  return true;
 }
 
 int main(void) {
@@ -216,7 +110,7 @@ int main(void) {
   // Configure platform
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
-  platform.loadFromFile = linuxLoadFromFile;
+  platform.loadFromFile = LOAD_FROM_FILE_FUNC;
   platform.time = 0;
   platform.deltaTime = 1/platform.fps;
 
@@ -224,20 +118,20 @@ int main(void) {
   // TODO(harrison): Investigate if we need to `mprotect` these
   // TODO(harrison): Have error checks which verify we get this memory
   lornockMemory.permanentStorageSize = LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE;
-  lornockMemory.permanentStorage = mmap(0, lornockMemory.permanentStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  lornockMemory.permanentStorage = ALLOCATE_MEMORY_FUNC(lornockMemory.permanentStorageSize);
 
   lornockMemory.transientStorageSize = LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE;
-  lornockMemory.transientStorage = mmap(0, lornockMemory.transientStorageSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  lornockMemory.transientStorage = ALLOCATE_MEMORY_FUNC(lornockMemory.transientStorageSize);
 
   // Check if game lib exists
-  if (getFileID(gameLibPath) == 0) {
+  if (!(LIB_EXISTS_FUNC())) {
     logln("ERROR: Cannot find liblornock");
 
     return -1;
   }
 
   // Load game code
-  if (!gameLibLoad()) {
+  if (!(LIB_RELOAD_FUNC())) {
     logln("ERROR: Failed to load game lib. Exiting game.");
 
     return -1;
@@ -289,8 +183,8 @@ int main(void) {
     }
 
     // TODO(harrison): only reload code in debug mode
-    if (gameLibNeedsToReload()) {
-      bool ok = gameLibLoad();
+    if (LIB_NEEDS_RELOADING_FUNC()) {
+      bool ok = LIB_RELOAD_FUNC();
 
       if (!ok) {
         logln("WARNING: can't load liblornock");
@@ -304,8 +198,7 @@ int main(void) {
         }
       }
     }
-
-    if (gameLibValid) {
+    if (LIB_IS_VALID_FUNC()) {
       gameLibUpdateFunction(&lornockMemory);
     }
 
