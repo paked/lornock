@@ -38,8 +38,9 @@ GameLibInitFunction gameLibInitFunction;
 
 // Config
 #define WINDOW_NAME "Lornock"
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 480
+#define WINDOW_WIDTH 1920/2
+#define WINDOW_HEIGHT 1080/2
+#define WINDOW_FULLSCREEN false
 
 // Globals
 SDL_Window* window;
@@ -107,10 +108,16 @@ int main(void) {
     // vsync doesn't exist
   }
 
+  if (WINDOW_FULLSCREEN) {
+    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+  }
+
   // Configure platform
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
   platform.loadFromFile = LOAD_FROM_FILE_FUNC;
+  platform.windowWidth = WINDOW_WIDTH;
+  platform.windowHeight = WINDOW_HEIGHT;
   platform.time = 0;
   platform.deltaTime = 1/platform.fps;
 
@@ -162,6 +169,17 @@ int main(void) {
           {
             platform.quit = true;
           } break;
+        case SDL_WINDOWEVENT:
+          {
+            switch (event.window.event) {
+              case SDL_WINDOWEVENT_SIZE_CHANGED:
+                {
+                  platform.windowWidth = event.window.data1;
+                  platform.windowHeight = event.window.data2;
+                } break;
+            }
+
+          } break;
         case SDL_KEYUP:
         case SDL_KEYDOWN:
           {
@@ -175,10 +193,6 @@ int main(void) {
 
             platform.keyStateNow[key] = event.key.state == SDL_PRESSED;
           } break;
-      }
-
-      if (event.type == SDL_QUIT) {
-        platform.quit = true;
       }
     }
 

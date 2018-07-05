@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: refactor the non-platform related stuff into a separate file
+
 #include <cstdio>
 
 // TODO: come up with a nicer name for dbg_assert
@@ -99,13 +101,18 @@ struct Platform {
   LoadFromFileFunc loadFromFile;
   OpenGLLoadProcFunc glLoadProc;
 
+  uint32 windowWidth;
+  uint32 windowHeight;
+
   // current time in ms
   uint32 time;
   real32 deltaTime;
 };
 
-#define getTime() platform->time
-#define getDt() platform->deltaTime
+#define getTime() (platform->time)
+#define getDt() (platform->deltaTime)
+#define getWindowWidth() (platform->windowWidth)
+#define getWindowHeight() (platform->windowHeight)
 
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
 

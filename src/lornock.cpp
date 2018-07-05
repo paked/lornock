@@ -55,12 +55,13 @@ extern "C" void lornockUpdate(LornockMemory* m) {
     // TODO: refactor into drawInit or something
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    // TODO(harrison): pull from platform layer
-    glViewport(0, 0, 640, 480);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m->initialized = true;
   }
+
+  // TODO(harrison): how much of a performance hit does this cost?
+  glViewport(0, 0, getWindowWidth(), getWindowHeight());
 
   updateAssets();
 

@@ -361,7 +361,7 @@ void gameStateUpdate(State* state) {
   glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  vec3 cameraPosition = vec3(0.0f, 0.0f, -7.0f);
+  vec3 cameraPosition = vec3(0.0f, 0.0f, -10.0f);
 
   mat4 view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
@@ -374,7 +374,7 @@ void gameStateUpdate(State* state) {
   view = mat4Translate(view, cameraPosition);
   view = view * quatToMat4(g->cameraOffset * g->cameraRotation);
 
-  mat4 projection = mat4Perspective(70.0f, 640.0f/480.0f, 0.1f, 10000.0f);
+  mat4 projection = mat4Perspective(70.0f, (real32) getWindowWidth() / (real32) getWindowHeight(), 0.1f, 10000.0f);
 
   {
     vec3 asteroidPosition = vec3(0, 0, 0);
