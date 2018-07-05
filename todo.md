@@ -2,9 +2,9 @@
 
 Tasks:
 
+- Begin work porting time travel code over
 - Refactor camera into camera struct
 - Generalise billboard renderer
-- Begin work porting time travel code over
 - Write win32 platform code
 
 Dev tooling:

@@ -1,5 +1,6 @@
 // External libraries
 #include <math.h>
+#include <ctype.h>
 
 // Vendored libraries
 #include <glad/glad.h>
@@ -21,6 +22,7 @@ LornockMemory* lornockMemory = 0;
 #include <hmm_wrapper.cpp>
 #include <assets.cpp>
 #include <lornock_data.cpp>
+#include <actions.cpp>
 #include <states.cpp>
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set

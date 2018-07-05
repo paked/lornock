@@ -72,6 +72,8 @@ struct GameState {
   quat rotStart;
   uint32 rotState;
   uint32 rotStartTime;
+
+  TimeBox timeBox;
 };
 
 uint64 faceLength = 30;
@@ -149,6 +151,8 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
 void gameStateInit(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
+
+  timeBox_init(&g->timeBox, "simple");
 
   g->cameraUp = g->cameraRight = {0};
   g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
@@ -358,10 +362,10 @@ void gameStateUpdate(State* state) {
   }
 
   /* drawing */
-  glClearColor(0.0f, 0.58f, 0.93f, 1.0f);
+  glClearColor(18.0f/255, 26.0f/255, 47.0f/255, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  vec3 cameraPosition = vec3(0.0f, 0.0f, -10.0f);
+  vec3 cameraPosition = vec3(0.0f, 0.0f, -8.0f);
 
   mat4 view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
