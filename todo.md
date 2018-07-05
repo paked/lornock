@@ -2,17 +2,28 @@
 
 Tasks:
 
-- Begin work porting time travel code over
+- [IN PROGRESS] Begin work porting time travel code over
+  - [x] Create Action datastructures
+  - [x] Parse timeline file
+  - [x] Plan how LARGE timelines will be handled (at least initially)
+  - [ ] Play timeline file
+  - [ ] Write timeline file
+- [IN PROGRESS] Write win32 platform code
+  - [x] Split linux platform code into separate file
+  - [x] Create "interface" which needs to be implemented by new platforms
+  - [ ] Write win32 platform code
 - Refactor camera into camera struct
 - Generalise billboard renderer
-- Write win32 platform code
-
 Dev tooling:
 - Create `dev.sh` (and `dev.bat`) environment with `edit`, `build`, and `run` macros
 - Create script which will list all TODOs and FIXMEs
+- Lighting
+- Have things on the world
+  - Have things on the world which change over time
 
 Eventually:
 
+- Pretty pixel art effect skybox generation
 - Create a platform side "renderer", and have the game just send commands to it
   - I need to experiment with what lornocks renderer "is" until I can actually do this though. No point making some obtusely generalised thing which I don't reaaaallly need
 
