@@ -118,6 +118,7 @@ struct GameState {
 
   vec3 playerPosition;
   vec2 playerSize;
+  vec3 playerLastMove;
 
   GLuint quadVAO;
   GLuint quadVBO;
@@ -342,6 +343,9 @@ void gameStateInit(State* state) {
   assetsRequestTexture(TEXTURE_test);
   assetsRequestTexture(TEXTURE_rock);
   assetsRequestTexture(TEXTURE_player);
+
+  // Submit player spawn...
+  timeBox_add(&g->timeBox, action_makeSpawn(g->playerPosition));
 }
 
 void gameStateUpdate(State* state) {
@@ -376,6 +380,10 @@ void gameStateUpdate(State* state) {
     pastPlayer_update(&g->pastPlayer, tb);
   }
 
+  if (keyJustDown(KEY_l)) {
+    timeBox_save(tb);
+  }
+
   /* updating */
   if (keyUp(KEY_shift)) {
     vec3 up = g->cameraUp;
@@ -385,22 +393,28 @@ void gameStateUpdate(State* state) {
     float speed = 2;
 
     if (keyDown(KEY_w)) {
-      movement += up * speed * getDt();
+      movement += up;
     }
 
     if (keyDown(KEY_s)) {
-      movement -= up * speed * getDt();
+      movement -= up;
     }
 
     if (keyDown(KEY_d)) {
-      movement += right * speed * getDt();
+      movement += right;
     }
 
     if (keyDown(KEY_a)) {
-      movement -= right * speed * getDt();
+      movement -= right;
     }
 
-    g->playerPosition += movement;
+    g->playerPosition += movement * speed * getDt();
+
+    if (!vec3AlmostEqual(movement, g->playerLastMove)) {
+      timeBox_add(tb, action_makeMove(g->playerPosition));
+
+      g->playerLastMove = movement;
+    }
   }
 
   g->playerPosition.x = clamp(g->playerPosition.x, -1.5f, 1.5f);

@@ -2,11 +2,12 @@
 
 Tasks:
 
+- Fix number keys not triggering input events
 - [IN PROGRESS] Begin work porting time travel code over
   - [x] Create Action datastructures
   - [x] Parse timeline file
   - [x] Plan how LARGE timelines will be handled (at least initially)
-  - [ ] Play timeline file
+  - [x] Play timeline file
   - [ ] Write timeline file
 - [IN PROGRESS] Write win32 platform code
   - [x] Split linux platform code into separate file
@@ -43,3 +44,8 @@ Eventually:
 - Focus on splitting "platform layer" from "game" in order to hopefully promote clean code
 - Use HandmadeMath and GLAD
 - Fast iteration with low compile time
+
+## For Shits And Gigs
+
+Without stdlib: 1.3s, 0.471mb
+Including vector: 1.5s, 0.479mb

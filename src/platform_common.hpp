@@ -89,6 +89,7 @@ struct LornockMemory {
 
 typedef void* (* OpenGLLoadProcFunc)(const char *name);
 typedef void (* LoadFromFileFunc)(const char *path, void** data, uint32* len);
+typedef void (* WriteToFileFunc)(const char *path, void* data, int64 len);
 
 struct Platform {
   int fps;
@@ -98,6 +99,7 @@ struct Platform {
   bool keyStateNow[MAX_KEY];
   bool keyStateLast[MAX_KEY];
 
+  WriteToFileFunc writeToFile;
   LoadFromFileFunc loadFromFile;
   OpenGLLoadProcFunc glLoadProc;
 
@@ -115,7 +117,8 @@ struct Platform {
 #define getWindowWidth() (platform->windowWidth)
 #define getWindowHeight() (platform->windowHeight)
 
-#define loadFromFile(p, d, l) platform->loadFromFile(p, d, l);
+#define loadFromFile(p, d, l) platform->loadFromFile(p, d, l)
+#define writeToFile(p, d, l) platform->writeToFile(p, d, l)
 
 #define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])
 #define keyJustUp(k) (!platform->keyStateNow[k] && platform->keyStateLast[k])

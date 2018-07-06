@@ -35,11 +35,30 @@ void linux_loadFromFile(const char* path, void** data, uint32* len) {
   int64 readSizeGot = read(fd, readData, readSizeExpected);
 
   if (readSizeGot != readSizeExpected) {
-    logfln("ERROR: could not read file (read: %zd wanted: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
+    logfln("ERROR: could not read file (wanted: %zd read: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
   }
 
   *data = readData;
   *len = (uint32) readSizeExpected;
+
+  close(fd);
+}
+
+void linux_writeToFile(const char* path, void* data, int64 len) {
+  /*logfln("writing to file %s. contents:\n%s", path, data);*/
+
+  int fd = open(path, O_RDWR | O_CREAT);
+  if (fd == -1) {
+    logfln("ERROR: unable to open file. fd: %d", fd);
+  }
+
+  int64 writeSizeGot = write(fd, data, len);
+
+  if (writeSizeGot != len) {
+    logfln("ERROR: could not write file (wanted: %zd read: %zd) (errno: %d)!", len, writeSizeGot, errno);
+  }
+
+  logln("Wrote file!");
 
   close(fd);
 }

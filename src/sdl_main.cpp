@@ -24,6 +24,7 @@ GameLibInitFunction gameLibInitFunction;
 
 #define ALLOCATE_MEMORY_FUNC linux_allocateMemory
 #define LOAD_FROM_FILE_FUNC linux_loadFromFile
+#define WRITE_TO_FILE_FUNC linux_writeToFile
 #define LIB_NEEDS_RELOADING_FUNC linux_libNeedsReloading
 #define LIB_RELOAD_FUNC linux_libReload
 #define LIB_IS_VALID_FUNC linux_libIsValid
@@ -126,6 +127,7 @@ int main(void) {
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
   platform.loadFromFile = LOAD_FROM_FILE_FUNC;
+  platform.writeToFile = WRITE_TO_FILE_FUNC;
   platform.windowWidth = WINDOW_WIDTH;
   platform.windowHeight = WINDOW_HEIGHT;
   platform.time = 0;

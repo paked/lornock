@@ -27,6 +27,12 @@ typedef hmm_quaternion quat;
 #define vec3Normalize(v) HMM_NormalizeVec3(v)
 #define vec4Normalize(v) HMM_NormalizeVec4(v)
 
+bool vec3AlmostEqual(vec3 a, vec3 b, real32 e=0.1) {
+  return fabs(b.x - a.x) < e &&
+    fabs(b.y - a.y) < e &&
+    fabs(b.z - a.z) < e;
+}
+
 vec3 vec3Lerp(real32 t, vec3 a, vec3 b) {
   vec3 p;
 
