@@ -47,6 +47,66 @@ uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
   {   BACK,   FRONT,  LEFT,   RIGHT }   // Top face
 };
 
+struct PastPlayer {
+  bool moving;
+
+  vec3 start;
+  vec3 destination;
+
+  uint64 sequence;
+  uint64 nextSequence;
+
+  vec3 pos;
+
+  uint32 startTime;
+  uint32 duration;
+};
+
+void pastPlayer_target(PastPlayer* pp, TimeBox *tb) {
+  Action next;
+  
+  if (!timeBox_nextActionInSequenceOfType(tb, &next, pp->sequence, MOVE)) {
+    pp->moving = false;
+
+    return;
+  }
+
+  pp->destination = next.move.pos;
+  pp->startTime = getTime();
+  pp->duration = (real32) TIME_BOX_TICK_MS_INTERVAL * (real32)(next.move.time - tb->time);
+
+  pp->nextSequence = next.move.sequence;
+}
+
+void pastPlayer_init(PastPlayer* pp, TimeBox* tb, SpawnAction first) {
+  pp->moving = true;
+
+  pp->sequence = first.sequence;
+
+  pp->start = first.pos;
+
+  pastPlayer_target(pp, tb);
+}
+
+void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
+  if (!pp->moving) {
+    return;
+  }
+
+  real32 pc = 1.0f - ((real32) ((pp->startTime + pp->duration) - getTime())) / (pp->duration); 
+  pc = clamp(pc, 0, 1);
+
+  pp->pos = vec3Lerp(pc, pp->start, pp->destination);
+
+  if (getTime() > pp->startTime + pp->duration) {
+    pp->pos = pp->destination;
+    pp->sequence = pp->nextSequence;
+    pp->start = pp->destination;
+
+    pastPlayer_target(pp, tb);
+  }
+}
+
 #define ROTATION_OFFSET deg2Rad(-30)
 
 struct GameState {
@@ -58,8 +118,12 @@ struct GameState {
 
   vec3 playerPosition;
   vec2 playerSize;
-  GLuint playerVAO;
-  GLuint playerVBO;
+
+  GLuint quadVAO;
+  GLuint quadVBO;
+
+  GLuint cubeVAO;
+  GLuint cubeVBO;
 
   vec3 cameraUp;
   vec3 cameraRight;
@@ -72,6 +136,9 @@ struct GameState {
   quat rotStart;
   uint32 rotState;
   uint32 rotStartTime;
+
+  bool pastPlayerExists;
+  PastPlayer pastPlayer;
 
   TimeBox timeBox;
 };
@@ -151,8 +218,10 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
 void gameStateInit(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
-
+  
   timeBox_init(&g->timeBox, "simple");
+
+  g->pastPlayerExists = false;
 
   g->cameraUp = g->cameraRight = {0};
   g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
@@ -228,14 +297,14 @@ void gameStateInit(State* state) {
     1, 1, 0,    1, 1
   };
 
-  GLuint playerVAO, playerVBO;
+  GLuint quadVAO, quadVBO;
 
-  glGenVertexArrays(1, &playerVAO);
-  glBindVertexArray(playerVAO);
+  glGenVertexArrays(1, &quadVAO);
+  glBindVertexArray(quadVAO);
 
-  glGenBuffers(1, &playerVBO);
+  glGenBuffers(1, &quadVBO);
 
-  glBindBuffer(GL_ARRAY_BUFFER, playerVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(quadData), quadData, GL_STATIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
@@ -243,18 +312,69 @@ void gameStateInit(State* state) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  g->playerVAO = playerVAO;
-  g->playerVBO = playerVBO;
+  g->quadVAO = quadVAO;
+  g->quadVBO = quadVBO;
+
+  // Cube
+  real32 cubeData[] = cubeMesh;
+
+  GLuint cubeVAO, cubeVBO;
+
+  glGenVertexArrays(1, &cubeVAO);
+  glBindVertexArray(cubeVAO);
+
+  glGenBuffers(1, &cubeVBO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cubeData), cubeData, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+
+  g->cubeVAO = cubeVAO;
+  g->cubeVBO = cubeVBO;
 
   // Asset requests
   assetsRequestShader(SHADER_default);
   assetsRequestShader(SHADER_billboard);
   assetsRequestTexture(TEXTURE_test);
+  assetsRequestTexture(TEXTURE_rock);
   assetsRequestTexture(TEXTURE_player);
 }
 
 void gameStateUpdate(State* state) {
   GameState* g = (GameState*) state->memory;
+  TimeBox *tb = &g->timeBox;
+
+  if (getTime() > tb->nextTickTime) {
+    tb->nextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
+
+    Action a;
+    while (timeBox_nextAction(tb, &a)) {
+      action_print(a);
+
+      switch (a.type) {
+        case SPAWN:
+          {
+            pastPlayer_init(&g->pastPlayer, tb, a.spawn);
+
+            g->pastPlayerExists = true;
+          } break;
+        default:
+          {
+            // We don't need to do anything
+          } break;
+      }
+    }
+
+    tb->time += 1;
+  }
+
+  if (g->pastPlayerExists) {
+    pastPlayer_update(&g->pastPlayer, tb);
+  }
 
   /* updating */
   if (keyUp(KEY_shift)) {
@@ -393,7 +513,7 @@ void gameStateUpdate(State* state) {
     shaderSetMatrix(&shader(SHADER_default), "view", view);
     shaderSetMatrix(&shader(SHADER_default), "projection", projection);
 
-    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_test).id);
+    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_rock).id);
     glBindVertexArray(g->asteroidVAO);
     glDrawArrays(GL_TRIANGLES, 0, g->asteroidVertCount);
   }
@@ -403,7 +523,6 @@ void gameStateUpdate(State* state) {
     Texture t = texture(TEXTURE_player);
 
     glUseProgram(s.id);
-
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(mat4d(1), g->playerPosition);
@@ -415,7 +534,28 @@ void gameStateUpdate(State* state) {
     shaderSetVec2(&s, "scale", g->playerSize);
 
     glBindTexture(GL_TEXTURE_2D, t.id);
-    glBindVertexArray(g->playerVAO);
+    glBindVertexArray(g->quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  }
+
+  if (g->pastPlayerExists) {
+    vec3 testPosition = g->pastPlayer.pos;
+
+    Shader s = shader(SHADER_default);
+    Texture t = texture(TEXTURE_test);
+
+    glUseProgram(s.id);
+
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(model, testPosition);
+    model = mat4Scale(model, vec3(0.5, 0.5, 0.5));
+
+    shaderSetMatrix(&s, "model", model);
+    shaderSetMatrix(&s, "view", view);
+    shaderSetMatrix(&s, "projection", projection);
+
+    glBindTexture(GL_TEXTURE_2D, t.id);
+    glBindVertexArray(g->cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
   }
 }

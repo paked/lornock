@@ -14,13 +14,15 @@ Tasks:
   - [ ] Write win32 platform code
 - Refactor camera into camera struct
 - Generalise billboard renderer
-Dev tooling:
-- Create `dev.sh` (and `dev.bat`) environment with `edit`, `build`, and `run` macros
-- Create script which will list all TODOs and FIXMEs
 - Lighting
 - Have things on the world
   - Have things on the world which change over time
 
+
+Dev tooling:
+- SWITCH TO `-Wall -Werror`
+- Create `dev.sh` (and `dev.bat`) environment with `edit`, `build`, and `run` macros
+- Create script which will list all TODOs and FIXMEs
 Eventually:
 
 - Pretty pixel art effect skybox generation

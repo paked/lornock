@@ -4,6 +4,8 @@ typedef hmm_v4 vec4;
 typedef hmm_m4 mat4;
 typedef hmm_quaternion quat;
 
+#define lerp(t, a, b) HMM_Lerp(a, t, b)
+
 #define vec2(x, y)        HMM_Vec2(x, y)
 #define vec3(x, y, z)     HMM_Vec3(x, y, z)
 #define vec4(x, y, z, w)  HMM_Vec4(x, y, z, w)
@@ -24,6 +26,16 @@ typedef hmm_quaternion quat;
 
 #define vec3Normalize(v) HMM_NormalizeVec3(v)
 #define vec4Normalize(v) HMM_NormalizeVec4(v)
+
+vec3 vec3Lerp(real32 t, vec3 a, vec3 b) {
+  vec3 p;
+
+  p.x = lerp(t, a.x, b.x);
+  p.y = lerp(t, a.y, b.y);
+  p.z = lerp(t, a.z, b.z);
+
+  return p;
+}
 
 quat quatFromPitchYawRoll(real64 roll, real64 pitch, real64 yaw) {
 	quat q = {0};
