@@ -7,8 +7,9 @@ Tasks:
   - [x] Create Action datastructures
   - [x] Parse timeline file
   - [x] Plan how LARGE timelines will be handled (at least initially)
-  - [x] Play timeline file
-  - [ ] Write timeline file
+  - [x] Play basic timeline file
+  - [x] Write basic timeline file
+  - [ ] Have timelines be both playing back and written (ie. bring back to feature parity with original codebase)
 - [IN PROGRESS] Write win32 platform code
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
@@ -18,7 +19,6 @@ Tasks:
 - Lighting
 - Have things on the world
   - Have things on the world which change over time
-
 
 Dev tooling:
 - SWITCH TO `-Wall -Werror`
@@ -45,7 +45,8 @@ Eventually:
 - Use HandmadeMath and GLAD
 - Fast iteration with low compile time
 
-## For Shits And Gigs
+## Brain Dump For Tomorrow
 
-Without stdlib: 1.3s, 0.471mb
-Including vector: 1.5s, 0.479mb
+1. Probably should look into writing some sort of allocator so it is easier to access the TransientStorage
+2. I AM GOING TO REWRITE THE READING OF ACTIONS SO THAT IT READS STRAIGHT FROM THE FILE MEMORY BUFFER AND PARSES EACH ACTION AT RUNTIME. IT IS NOT SUPER EFFICIENT BUT IT IS THE EASIEST WAY TO START.
+3. Each time the player jumps backwards or forwards in time THEY SHOULD WRITE THEIR PENDING ACTIONS.
