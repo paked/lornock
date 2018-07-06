@@ -2,7 +2,7 @@
   uint32 type; \
   int64 time; \
   uint64 sequence; \
-  uint64 jump;
+  uint64 jumpID;
 
 enum ActionType {
   NONE,
@@ -11,45 +11,52 @@ enum ActionType {
   SPAWN
 };
 
+struct CommonAction {
+  ACTION_COMMON_FIELDS;
+};
+
 struct MoveAction {
-  ACTION_COMMON_FIELDS
+  ACTION_COMMON_FIELDS;
 
   vec3 pos;
 };
 
 struct JumpAction {
-  ACTION_COMMON_FIELDS
+  ACTION_COMMON_FIELDS;
 
   int64 destination;
 };
 
 struct SpawnAction {
-  ACTION_COMMON_FIELDS
+  ACTION_COMMON_FIELDS;
 
   vec3 pos;
 };
 
-union Action {
+struct Action {
   uint32 type;
 
-  SpawnAction spawn;
-  MoveAction move;
-  JumpAction jump;
+  union {
+    CommonAction common;
+    SpawnAction spawn;
+    MoveAction move;
+    JumpAction jump;
+  };
 };
 
 void action_print(Action a) {
   switch (a.type) {
     case MOVE:
       {
-        logfln("MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)", a.move.time, a.move.sequence, a.move.jump, a.move.pos.x, a.move.pos.y, a.move.pos.z);
+        logfln("MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)", a.common.time, a.common.sequence, a.common.jumpID, a.move.pos.x, a.move.pos.y, a.move.pos.z);
       } break;
     case JUMP:
       {
-        logfln("JUMP t=%ld s=%lu j=%lu dt=%ld)", a.jump.time, a.jump.sequence, a.jump.jump, a.jump.destination);
+        logfln("JUMP t=%ld s=%lu j=%lu dt=%ld)", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
       } break;
     case SPAWN:
       {
-        logfln("SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)", a.spawn.time, a.spawn.sequence, a.spawn.jump, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
+        logfln("SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
       } break;
     default:
       {
@@ -96,7 +103,6 @@ void eatUntilChar(char* paramName, uint32 len, char to, char* line, uint32 lineL
     }
 
     if (c == to) {
-
       break;
     }
 
@@ -108,13 +114,18 @@ void eatUntilChar(char* paramName, uint32 len, char to, char* line, uint32 lineL
   *upTo = *upTo + i;
 }
 
-#define PAGE_SIZE 128
+#define TIME_BOX_PAGE_SIZE (128)
+#define TIME_BOX_TICKS_PER_SECOND (10) // per second
+#define TIME_BOX_TICK_MS_INTERVAL (1000/TIME_BOX_TICKS_PER_SECOND)
 
 struct TimeBox {
-  char* saveFile;
+  char* saveName;
+
+  int64 actionIndex;
+  uint32 nextTickTime;
 
   int64 actionCount;
-  Action actions[PAGE_SIZE];
+  Action actions[TIME_BOX_PAGE_SIZE];
 
   int64 time;
   uint64 sequence;
@@ -122,8 +133,16 @@ struct TimeBox {
 };
 
 bool timeBox_init(TimeBox* tb, const char* name) {
+  // Set TimeBox to 0
+  tb->actionIndex = 0;
+  tb->nextTickTime = 0;
   tb->actionCount = 0;
 
+  tb->time = 0;
+  tb->sequence = 0;
+  tb->jumpID = 0;
+
+  // Load save file
   char saveFilename[128];
 
   snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
@@ -167,24 +186,24 @@ bool timeBox_init(TimeBox* tb, const char* name) {
     }
 
     if (strcmp("MOVE", actionName) == 0) {
-      a.type = MOVE;
+      a.type = a.move.type = MOVE;
 
-      actionTime = &a.move.time;
-      actionSequence = &a.move.sequence;
-      actionJump = &a.move.jump;
+      actionTime = &a.common.time;
+      actionSequence = &a.common.sequence;
+      actionJump = &a.common.jumpID;
     } else if (strcmp("JUMP", actionName) == 0) {
-      logfln("what: '%s'", actionName);
       a.type = JUMP;
+      a.type = a.jump.type = JUMP;
 
-      actionTime = &a.jump.time;
-      actionSequence = &a.jump.sequence;
-      actionJump = &a.jump.jump;
+      actionTime = &a.common.time;
+      actionSequence = &a.common.sequence;
+      actionJump = &a.common.jumpID;
     } else if (strcmp("SPAWN", actionName) == 0) {
-      a.type = SPAWN;
+      a.type = a.spawn.type = SPAWN;
 
-      actionTime = &a.spawn.time;
-      actionSequence = &a.spawn.sequence;
-      actionJump = &a.spawn.jump;
+      actionTime = &a.common.time;
+      actionSequence = &a.common.sequence;
+      actionJump = &a.common.jumpID;
     } else {
       logfln("WARNING: unknown action '%s'", actionName);
 
@@ -255,9 +274,47 @@ bool timeBox_init(TimeBox* tb, const char* name) {
     tb->actionCount++;
   }
 
-  for (int i = 0; i < tb->actionCount; i++) {
-    action_print(tb->actions[i]);
+  return true;
+}
+
+bool timeBox_nextAction(TimeBox *tb, Action* a, bool peek = false) {
+  while (tb->actionIndex < tb->actionCount) {
+    Action t = tb->actions[tb->actionIndex];
+
+    if (t.common.time > tb->time) {
+      break;
+    }
+
+    *a = tb->actions[tb->actionIndex];
+
+    if (!peek) {
+      tb->actionIndex += 1;
+    }
+
+    return true;
   }
 
-  return true;
+  // TODO(harrison): get next page, etc.
+
+  return false;
+}
+
+bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 type) {
+  for (int i = 0; i < tb->actionCount; i++) {
+    Action t = tb->actions[i];
+
+    if (t.common.sequence == s + 1) {
+      if (t.common.type == type) {
+        *a = t;
+
+        return true;
+      }
+
+      s += 1;
+    }
+  }
+
+  // Scan next page
+
+  return false;
 }
