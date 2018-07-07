@@ -258,8 +258,9 @@ struct TimeBox {
   int64 actionIndex;
   uint32 nextTickTime;
 
-  int64 actionCount;
-  Action actions[TIME_BOX_PAGE_SIZE];
+  char* raw;
+  uint32 rawLen;
+  uint32 rawUpTo;
 
   int64 writeCount;
   Action writeBuffer[TIME_BOX_WRITE_BUFFER_SIZE];
@@ -273,8 +274,9 @@ bool timeBox_init(TimeBox* tb, const char* name) {
   // Set TimeBox to 0
   tb->actionIndex = 0;
   tb->nextTickTime = 0;
-  tb->actionCount = 0;
   tb->writeCount = 0;
+
+  tb->rawUpTo = 0;
 
   tb->time = 0;
   tb->sequence = 0;
@@ -282,39 +284,13 @@ bool timeBox_init(TimeBox* tb, const char* name) {
 
   // Load save file
   char saveFilename[128];
-
   snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
 
   void* rawData;
-  uint32 rawDataLen;
 
-  loadFromFile(saveFilename, &rawData, &rawDataLen);
+  loadFromFile(saveFilename, &rawData, &tb->rawLen);
 
-  char* data = (char*) rawData;
-
-  uint32 lineLen = 0;
-  char* line = (char*) lornockMemory->transientStorage;
-
-  Action latestAction;
-  latestAction.common.sequence = -1;
-
-  for (uint32 sourceI = 0; sourceI < rawDataLen; sourceI++) {
-    getLine(line, &lineLen, &sourceI, data, rawDataLen);
-
-    Action a;
-
-    if (!action_parse(&a, line, lineLen)) {
-      logln("could not parse line");
-      continue;
-    }
-
-    tb->actions[tb->actionCount] = a;
-    tb->actionCount++;
-
-    if (a.common.sequence > latestAction.common.sequence) {
-      latestAction = a;
-    }
-  }
+  tb->raw = (char*) rawData;
 
   return true;
 }
@@ -372,31 +348,53 @@ void timeBox_add(TimeBox* tb, Action a) {
   tb->writeCount += 1;
 }
 
-bool timeBox_nextAction(TimeBox *tb, Action* a, bool peek = false) {
-  while (tb->actionIndex < tb->actionCount) {
-    Action t = tb->actions[tb->actionIndex];
+bool timeBox_nextAction(TimeBox *tb, Action* a) {
+  uint32 lineLen = 0;
+  char* line = (char*) lornockMemory->transientStorage;
+
+  while (tb->rawUpTo < tb->rawLen) {
+    getLine(line, &lineLen, &tb->rawUpTo, tb->raw, tb->rawLen);
+
+    tb->rawUpTo += 1;
+
+    Action t;
+
+    if (!action_parse(&t, line, lineLen)) {
+      logln("Could not parse line!");
+
+      continue;
+    }
 
     if (t.common.time > tb->time) {
       break;
     }
 
-    *a = tb->actions[tb->actionIndex];
-
-    if (!peek) {
-      tb->actionIndex += 1;
-    }
+    *a = t;
 
     return true;
   }
-
-  // TODO(harrison): get next page, etc.
 
   return false;
 }
 
 bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 type) {
-  for (int i = 0; i < tb->actionCount; i++) {
-    Action t = tb->actions[i];
+  uint32 lineLen = 0;
+  char* line = (char*) lornockMemory->transientStorage;
+
+  uint32 upTo = 0;
+
+  while (upTo < tb->rawLen) {
+    getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
+
+    upTo += 1;
+
+    Action t;
+
+    if (!action_parse(&t, line, lineLen)) {
+      logln("Could not parse line!");
+
+      continue;
+    }
 
     if (t.common.sequence == s + 1) {
       if (t.common.type == type) {
@@ -408,8 +406,6 @@ bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 ty
       s += 1;
     }
   }
-
-  // Scan next page
 
   return false;
 }

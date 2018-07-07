@@ -83,7 +83,7 @@ void pastPlayer_init(PastPlayer* pp, TimeBox* tb, SpawnAction first) {
 
   pp->sequence = first.sequence;
 
-  pp->start = first.pos;
+  pp->pos = pp->start = first.pos;
 
   pastPlayer_target(pp, tb);
 }
