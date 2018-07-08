@@ -1,0 +1,6 @@
+[submodule "vendor/glad"]
+	path = vendor/glad
+	url = https://github.com/Dav1dde/glad.git
+[submodule "vendor/HandmadeMath"]
+	path = vendor/HandmadeMath
+	url = git@github.com:paked/Handmade-Math.git
