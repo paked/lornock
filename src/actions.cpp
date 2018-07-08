@@ -1,4 +1,4 @@
-void getLine(char* line, uint32* lineLen, uint32* upTo, char* source, uint32 sourceLen) {
+bool getLine(char* line, uint32* lineLen, uint32* upTo, char* source, uint32 sourceLen) {
   line[0] = '\0';
 
   uint32 i = 0;
@@ -19,6 +19,8 @@ void getLine(char* line, uint32* lineLen, uint32* upTo, char* source, uint32 sou
 
   *lineLen = i;
   *upTo = i + *upTo;
+
+  return i > 0;
 }
 
 void eatUntilChar(char* paramName, uint32 len, char to, char* line, uint32 lineLen, uint32* upTo) {
@@ -111,6 +113,15 @@ Action action_makeSpawn(vec3 pos) {
   return a;
 }
 
+Action action_makeJump(int64 destination) {
+  Action a;
+
+  a.type = JUMP;
+  a.jump.destination = destination;
+
+  return a;
+}
+
 void action_print(Action a) {
   switch (a.type) {
     case MOVE:
@@ -119,7 +130,7 @@ void action_print(Action a) {
       } break;
     case JUMP:
       {
-        logfln("JUMP t=%ld s=%lu j=%lu dt=%ld)", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
+        logfln("JUMP t=%ld s=%lu j=%lu dt=%ld", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
       } break;
     case SPAWN:
       {
@@ -270,19 +281,34 @@ struct TimeBox {
   uint64 jumpID;
 };
 
-bool timeBox_init(TimeBox* tb, const char* name) {
-  // Set TimeBox to 0
-  tb->actionIndex = 0;
-  tb->nextTickTime = 0;
-  tb->writeCount = 0;
+void timeBox_setTime(TimeBox* tb, int64 time) {
+  tb->time = time;
+
+  uint32 lineLen = 0;
+  char* line = (char*) lornockMemory->transientStorage;
 
   tb->rawUpTo = 0;
 
-  tb->time = 0;
-  tb->sequence = 0;
-  tb->jumpID = 0;
+  while (tb->rawUpTo < tb->rawLen) {
+    getLine(line, &lineLen, &tb->rawUpTo, tb->raw, tb->rawLen);
 
-  // Load save file
+    tb->rawUpTo += 1;
+
+    Action t;
+
+    if (!action_parse(&t, line, lineLen)) {
+      logln("Could not parse line!");
+
+      continue;
+    }
+
+    if (t.common.time > tb->time) {
+      break;
+    }
+  }
+}
+
+void timeBox_read(TimeBox* tb, const char* name) {
   char saveFilename[128];
   snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
 
@@ -292,31 +318,109 @@ bool timeBox_init(TimeBox* tb, const char* name) {
 
   tb->raw = (char*) rawData;
 
+  char infoFname[128];
+  snprintf(infoFname, 128, "data/saves/%s.info", name);
+
+  uint32 infoLen;
+  void* infoData;
+
+  loadFromFile(infoFname, &infoData, &infoLen);
+
+  int64 time;
+  uint64 sequence;
+  uint64 jumpID;
+
+  sscanf((char*) infoData, "%ld %lu %lu", &time, &sequence, &jumpID);
+
+  timeBox_setTime(tb, time);
+
+  tb->sequence = sequence;
+  tb->jumpID = jumpID;
+}
+
+bool timeBox_init(TimeBox* tb, const char* name) {
+  // Set TimeBox to 0
+  tb->actionIndex = 0;
+  tb->nextTickTime = 0;
+  tb->writeCount = 0;
+
+  tb->rawUpTo = 0;
+
+  timeBox_read(tb, name);
+
   return true;
 }
 
 void timeBox_save(TimeBox* tb) {
   char* out = (char*) lornockMemory->transientStorage;
+  out[0] = '\0';
 
-  char line[256] = {};
+  uint32 parseLineLen = 0;
+  char parseLine[256];
 
-  for (int i = 0; i < tb->writeCount; i++) {
-    Action a = tb->writeBuffer[i];
+  char outLine[256] = {0};
 
-    line[0] = '\0';
+  uint32 upTo = 0;
+  uint32 wroteTo = 0;
 
-    switch (a.type) {
+  while (wroteTo < tb->writeCount) {
+    Action toWrite = tb->writeBuffer[wroteTo];
+
+    uint32 tempUpTo = upTo;
+
+    while (getLine(parseLine, &parseLineLen, &tempUpTo, tb->raw, tb->rawLen)) {
+      tempUpTo += 1;
+
+      Action a;
+
+      if (!action_parse(&a, parseLine, parseLineLen)) {
+        logln("WARNING: failed to parse action while writing");
+
+        continue;
+      }
+
+      if (a.common.time > toWrite.common.time) {
+        break;
+      }
+
+      upTo = tempUpTo;
+
+      switch (a.type) {
+        case MOVE:
+          {
+            snprintf(outLine, 256, "MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.move.pos.x, a.move.pos.y, a.move.pos.z);
+          } break;
+        case JUMP:
+          {
+            snprintf(outLine, 256, "JUMP t=%ld s=%lu j=%lu dt=%ld\n", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
+          } break;
+        case SPAWN:
+          {
+            snprintf(outLine, 256, "SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
+          } break;
+        default:
+          {
+            logln("ERROR: cannot serialize unknown action type");
+
+            continue;
+          } break;
+      }
+
+      strcat(out, outLine);
+    }
+
+    switch (toWrite.type) {
       case MOVE:
         {
-          snprintf(line, 256, "MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.move.pos.x, a.move.pos.y, a.move.pos.z);
+          snprintf(outLine, 256, "MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", toWrite.common.time, toWrite.common.sequence, toWrite.common.jumpID, toWrite.move.pos.x, toWrite.move.pos.y, toWrite.move.pos.z);
         } break;
       case JUMP:
         {
-          snprintf(line, 256, "JUMP t=%ld s=%lu j=%lu dt=%ld)\n", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
+          snprintf(outLine, 256, "JUMP t=%ld s=%lu j=%lu dt=%ld\n", toWrite.common.time, toWrite.common.sequence, toWrite.common.jumpID, toWrite.jump.destination);
         } break;
       case SPAWN:
         {
-          snprintf(line, 256, "SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
+          snprintf(outLine, 256, "SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", toWrite.common.time, toWrite.common.sequence, toWrite.common.jumpID, toWrite.spawn.pos.x, toWrite.spawn.pos.y, toWrite.spawn.pos.z);
         } break;
       default:
         {
@@ -324,12 +428,53 @@ void timeBox_save(TimeBox* tb) {
         } break;
     }
 
-    strcat(out, line);
+    strcat(out, outLine);
+
+    wroteTo += 1;
   }
 
-  writeToFile("data/saves/simple.timeline.2", (void*)out, strlen(out));
+  while (upTo < tb->rawLen) {
+    getLine(parseLine, &parseLineLen, &upTo, tb->raw, tb->rawLen);
+    upTo += 1;
+
+    Action a;
+
+    if (!action_parse(&a, parseLine, parseLineLen)) {
+      logln("Could not parse line");
+
+      continue;
+    }
+
+    switch (a.type) {
+      case MOVE:
+        {
+          snprintf(outLine, 256, "MOVE t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.move.pos.x, a.move.pos.y, a.move.pos.z);
+        } break;
+      case JUMP:
+        {
+          snprintf(outLine, 256, "JUMP t=%ld s=%lu j=%lu dt=%ld\n", a.common.time, a.common.sequence, a.common.jumpID, a.jump.destination);
+        } break;
+      case SPAWN:
+        {
+          snprintf(outLine, 256, "SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
+        } break;
+      default:
+        {
+          continue;
+        } break;
+    }
+
+    strcat(out, outLine);
+  }
 
   tb->writeCount = 0;
+  writeToFile("data/saves/simple.timeline", (void*) out, strlen(out));
+
+  char info[128];
+
+  snprintf(info, 128, "%ld %lu %lu", tb->time, tb->sequence, tb->jumpID);
+
+  writeToFile("data/saves/simple.info", info, strlen(info));
 }
 
 void timeBox_add(TimeBox* tb, Action a) {
@@ -404,6 +549,39 @@ bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 ty
       }
 
       s += 1;
+    }
+  }
+
+  return false;
+}
+
+bool timeBox_findLastActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 type) {
+  uint32 lineLen = 0;
+  char* line = (char*) lornockMemory->transientStorage;
+
+  uint32 upTo = 0;
+
+  while (upTo < tb->rawLen) {
+    getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
+
+    upTo += 1;
+
+    Action t;
+
+    if (!action_parse(&t, line, lineLen)) {
+      logln("Could not parse line!");
+
+      continue;
+    }
+
+    if (t.common.sequence == s) {
+      if (t.common.type == type) {
+        *a = t;
+
+        return true;
+      }
+
+      s -= 1;
     }
   }
 

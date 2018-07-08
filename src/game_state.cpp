@@ -344,8 +344,17 @@ void gameStateInit(State* state) {
   assetsRequestTexture(TEXTURE_rock);
   assetsRequestTexture(TEXTURE_player);
 
-  // Submit player spawn...
-  timeBox_add(&g->timeBox, action_makeSpawn(g->playerPosition));
+  Action a;
+
+  if (!timeBox_findLastActionInSequenceOfType(&g->timeBox, &a, g->timeBox.sequence, MOVE)) {
+    logln("ERROR: could not find last action of type.");
+
+    // FIXME(harrison): Add in some sort of safeguard to stop this from happening
+  } else {
+    g->playerPosition = a.move.pos;
+
+    logfln("%f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
+  }
 }
 
 void gameStateUpdate(State* state) {
@@ -378,6 +387,17 @@ void gameStateUpdate(State* state) {
 
   if (g->pastPlayerExists) {
     pastPlayer_update(&g->pastPlayer, tb);
+  }
+
+  if (keyJustDown(KEY_tab)) {
+    int64 dest = 30;
+
+    timeBox_add(tb, action_makeJump(dest));
+    tb->jumpID += 1;
+    timeBox_save(tb);
+    timeBox_read(tb, "simple");
+    timeBox_setTime(tb, dest);
+    timeBox_add(tb, action_makeSpawn(g->playerPosition));
   }
 
   if (keyJustDown(KEY_l)) {

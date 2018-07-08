@@ -56,6 +56,7 @@ set(DATA_FILES
     data/shaders/billboard.vert
     data/shaders/billboard.frag
 
+    data/saves/simple.info
     data/saves/simple.timeline
 
     data/img/player.png
