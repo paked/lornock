@@ -522,7 +522,7 @@ bool timeBox_nextAction(TimeBox *tb, Action* a) {
   return false;
 }
 
-bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 type) {
+bool timeBox_findNextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 type) {
   uint32 lineLen = 0;
   char* line = (char*) lornockMemory->transientStorage;
 
@@ -549,6 +549,36 @@ bool timeBox_nextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint32 ty
       }
 
       s += 1;
+    }
+  }
+
+  return false;
+}
+
+
+bool timeBox_findNextActionInSequence(TimeBox *tb, Action* a, int s) {
+  uint32 lineLen = 0;
+  char* line = (char*) lornockMemory->transientStorage;
+
+  uint32 upTo = 0;
+
+  while (upTo < tb->rawLen) {
+    getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
+
+    upTo += 1;
+
+    Action t;
+
+    if (!action_parse(&t, line, lineLen)) {
+      logln("Could not parse line!");
+
+      continue;
+    }
+
+    if (t.common.sequence == s + 1) {
+      *a = t;
+
+      return true;
     }
   }
 

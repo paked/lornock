@@ -48,6 +48,7 @@ uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
 };
 
 struct PastPlayer {
+  bool exists;
   bool moving;
 
   vec3 start;
@@ -65,7 +66,8 @@ struct PastPlayer {
 void pastPlayer_target(PastPlayer* pp, TimeBox *tb) {
   Action next;
   
-  if (!timeBox_nextActionInSequenceOfType(tb, &next, pp->sequence, MOVE)) {
+  if (!timeBox_findNextActionInSequenceOfType(tb, &next, pp->sequence, MOVE)) {
+    logln("SETTING PLAYER TO IMMOBILE");
     pp->moving = false;
 
     return;
@@ -78,17 +80,41 @@ void pastPlayer_target(PastPlayer* pp, TimeBox *tb) {
   pp->nextSequence = next.move.sequence;
 }
 
-void pastPlayer_init(PastPlayer* pp, TimeBox* tb, SpawnAction first) {
+void pastPlayer_init(PastPlayer* pp, TimeBox* tb, Action first) {
+  pp->exists = true;
   pp->moving = true;
 
-  pp->sequence = first.sequence;
+  pp->sequence = first.common.sequence;
 
-  pp->pos = pp->start = first.pos;
+  vec3 pos = {0};
+
+  if (first.type == MOVE) {
+    pos = first.move.pos;
+  } else if(first.type == SPAWN) {
+    pos = first.spawn.pos;
+  } else {
+    logln("ERROR: invalid action to init a pastPlayer with");
+  }
+
+  pp->pos = pp->start = pos;
 
   pastPlayer_target(pp, tb);
 }
 
 void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
+  Action a;
+  if (!timeBox_findNextActionInSequence(tb, &a, pp->sequence)) {
+    logfln("WARNING: PastPlayer should have been killed before this point: %ld", pp->sequence);
+
+    pp->exists = false;
+  }
+
+  if (a.type == JUMP) {
+    pp->exists = false;
+
+    return;
+  }
+
   if (!pp->moving) {
     return;
   }
@@ -108,6 +134,8 @@ void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
 }
 
 #define ROTATION_OFFSET deg2Rad(-30)
+
+#define MAX_PAST_PLAYERS 10
 
 struct GameState {
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
@@ -138,8 +166,7 @@ struct GameState {
   uint32 rotState;
   uint32 rotStartTime;
 
-  bool pastPlayerExists;
-  PastPlayer pastPlayer;
+  PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
   TimeBox timeBox;
 };
@@ -216,13 +243,31 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   }
 }
 
+int gameState_getFirstPastPlayer(GameState* g) {
+  int id = -1;
+
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    if (!g->pastPlayers[i].exists) {
+      id = i;
+
+      break;
+    }
+  }
+
+  return id;
+}
+
+void gameState_disableAllPastPlayers(GameState* g) {
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    g->pastPlayers[i].exists = false;
+  }
+}
+
 void gameStateInit(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
   
   timeBox_init(&g->timeBox, "simple");
-
-  g->pastPlayerExists = false;
 
   g->cameraUp = g->cameraRight = {0};
   g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
@@ -235,6 +280,8 @@ void gameStateInit(State* state) {
   g->rotStartTime = getTime();
 
   g->currentFace = FRONT;
+
+  gameState_disableAllPastPlayers(g);
 
   // init world
   for (int y = 0; y < WORLD_HEIGHT; y++) {
@@ -371,9 +418,14 @@ void gameStateUpdate(State* state) {
       switch (a.type) {
         case SPAWN:
           {
-            pastPlayer_init(&g->pastPlayer, tb, a.spawn);
+            int id = gameState_getFirstPastPlayer(g);
+            if (id < 0) {
+              logln("WARNING: too many active past players!");
 
-            g->pastPlayerExists = true;
+              continue;
+            }
+
+            pastPlayer_init(&g->pastPlayers[id], tb, a);
           } break;
         default:
           {
@@ -385,12 +437,16 @@ void gameStateUpdate(State* state) {
     tb->time += 1;
   }
 
-  if (g->pastPlayerExists) {
-    pastPlayer_update(&g->pastPlayer, tb);
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    if (!g->pastPlayers[i].exists) {
+      continue;
+    }
+
+    pastPlayer_update(&g->pastPlayers[i], tb);
   }
 
   if (keyJustDown(KEY_tab)) {
-    int64 dest = 30;
+    int64 dest = 10;
 
     timeBox_add(tb, action_makeJump(dest));
     tb->jumpID += 1;
@@ -398,6 +454,82 @@ void gameStateUpdate(State* state) {
     timeBox_read(tb, "simple");
     timeBox_setTime(tb, dest);
     timeBox_add(tb, action_makeSpawn(g->playerPosition));
+
+    gameState_disableAllPastPlayers(g);
+
+    uint32 lineLen = 0;
+    char* line = (char*) lornockMemory->transientStorage;
+
+    uint32 upTo = 0;
+
+    while (upTo < tb->rawLen) {
+      getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
+
+      upTo += 1;
+
+      Action spawnAction;
+
+      if (!action_parse(&spawnAction, line, lineLen)) {
+        logln("Could not parse line!");
+
+        continue;
+      }
+
+      if (spawnAction.common.time > tb->time) {
+        break;
+      }
+
+      if (spawnAction.type != SPAWN) {
+        continue;
+      }
+
+      bool needPastPlayer = true;
+      uint32 searchUpTo = upTo;
+
+      Action lastAction = spawnAction;
+
+      while (searchUpTo < tb->rawLen) {
+        getLine(line, &lineLen, &searchUpTo, tb->raw, tb->rawLen);
+        searchUpTo += 1;
+
+        Action jumpAction;
+
+        if (!action_parse(&jumpAction, line, lineLen)) {
+          logln("Could not parse line!");
+
+          continue;
+        }
+
+        if (jumpAction.common.time > tb->time) {
+          break;
+        }
+
+        if (jumpAction.common.jumpID == spawnAction.common.jumpID && jumpAction.type == MOVE) {
+          lastAction = jumpAction;
+        }
+
+        if (jumpAction.common.type != JUMP || jumpAction.common.jumpID != spawnAction.common.jumpID) {
+          continue;
+        }
+
+        needPastPlayer = false;
+
+        break;
+      }
+
+      if (needPastPlayer) {
+        int id = gameState_getFirstPastPlayer(g);
+        if (id < 0) {
+          logln("WARNING: too many active past players!");
+
+          continue;
+        }
+
+        logln("SPAWNED REMOTE PAST PLAYER");
+
+        pastPlayer_init(&g->pastPlayers[id], tb, lastAction);
+      }
+    }
   }
 
   if (keyJustDown(KEY_l)) {
@@ -572,24 +704,31 @@ void gameStateUpdate(State* state) {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
 
-  if (g->pastPlayerExists) {
-    vec3 testPosition = g->pastPlayer.pos;
-
+  {
     Shader s = shader(SHADER_default);
     Texture t = texture(TEXTURE_test);
 
     glUseProgram(s.id);
 
-    mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, testPosition);
-    model = mat4Scale(model, vec3(0.5, 0.5, 0.5));
-
-    shaderSetMatrix(&s, "model", model);
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
-    glBindTexture(GL_TEXTURE_2D, t.id);
-    glBindVertexArray(g->cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+      if (!g->pastPlayers[i].exists) {
+        continue;
+      }
+
+      PastPlayer pp = g->pastPlayers[i];
+      mat4 model = mat4d(1.0f);
+
+      model = mat4Translate(model, pp.pos);
+      model = mat4Scale(model, vec3(0.5, 0.5, 0.5));
+
+      shaderSetMatrix(&s, "model", model);
+
+      glBindTexture(GL_TEXTURE_2D, t.id);
+      glBindVertexArray(g->cubeVAO);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
   }
 }
