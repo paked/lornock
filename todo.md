@@ -1,34 +1,49 @@
 # Lornock
 
-Tasks:
+Todo:
 
-- Fix number keys not triggering input events
-- [IN PROGRESS] Begin work porting time travel code over
-  - [x] Create Action datastructures
-  - [x] Parse timeline file
-  - [x] Plan how LARGE timelines will be handled (at least initially)
-  - [x] Play basic timeline file
-  - [x] Write basic timeline file
-  - [ ] Have timelines be both playing back and written (ie. bring back to feature parity with original codebase)
-- [IN PROGRESS] Write win32 platform code
-  - [x] Split linux platform code into separate file
-  - [x] Create "interface" which needs to be implemented by new platforms
-  - [ ] Write win32 platform code
+- Make billboarding work on a per face basis
+- Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct
 - Generalise billboard renderer
 - Lighting
 - Have things on the world
   - Have things on the world which change over time
+- Fix number keys not triggering input events
+- Refactor TimeBox into GOOD CODE.
+  - Come up with a consistent API for accessing the timebox
+    - Remove the concept of "upto" state from the TimeBox, create a separate `TimeBoxIndex` struct which contains that info.
+    - Functions like `timeBox_findNextAction(TimeBox* tb, TimeBoxIndex* tbi, uint64 sequence)`
+    - Create versatile search functions
+  - Parse each line into an action when it is first read, keep in chunks of certain sizes and kept in some storage
+    - Create a divide between `FrameStorage` (memory which gets killed after the end of a frame), `TransientStorage` (memory which can be killed at any point and regenerated if need be, usually lasts many frames though)
+
+In progress:
+- [IN PROGRESS] Windows support
+  - [x] Split linux platform code into separate file
+  - [x] Create "interface" which needs to be implemented by new platforms
+  - [ ] Write win32 platform code
+
+Done:
+- [x] Begin work porting time travel code over
+  - [x] Create Action datastructures
+  - [x] Parse timeline file
+  - [x] Plan how LARGE timelines will be handled (at least initially)
+  - [x] Play basic timeline file
+  - [x] Write basic timeline file
+  - [x] Have timelines be both playing back and written (ie. bring back to feature parity with original codebase)
 
 Dev tooling:
 - SWITCH TO `-Wall -Werror`
 - Create `dev.sh` (and `dev.bat`) environment with `edit`, `build`, and `run` macros
 - Create script which will list all TODOs and FIXMEs
+
 Eventually:
 
 - Pretty pixel art effect skybox generation
 - Create a platform side "renderer", and have the game just send commands to it
   - I need to experiment with what lornocks renderer "is" until I can actually do this though. No point making some obtusely generalised thing which I don't reaaaallly need
+- Run on OSX
 
 ## Manifesto
 
