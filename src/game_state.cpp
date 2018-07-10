@@ -37,6 +37,21 @@ enum {
   ROT_IDLE
 };
 
+void printRot(uint32 r) {
+  switch (r) {
+    case ROT_FORWARD:
+      { logln("forward rotating"); } break;
+    case ROT_BACKWARD:
+      { logln("backward rotating"); } break;
+    case ROT_LEFT:
+      { logln("left rotating"); } break;
+    case ROT_RIGHT:
+      { logln("right rotating"); } break;
+    case ROT_IDLE:
+      { logln("idle rotating"); } break;
+  }
+}
+
 uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
   //  FWD     BWD     LWD     RWD
   {   BOTTOM, TOP,    LEFT,   RIGHT },  // Back face
@@ -133,7 +148,8 @@ void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
   }
 }
 
-#define ROTATION_OFFSET deg2Rad(-30)
+#define CAMERA_ROTATION_OFFSET (-40)
+#define CAMERA_POSITION_OFFSET_Z (-6.25f)
 
 #define MAX_PAST_PLAYERS 10
 
@@ -143,6 +159,12 @@ struct GameState {
   uint64 asteroidVertCount;
   GLuint asteroidVAO;
   GLuint asteroidVBO;
+
+  vec3 playerUp;
+  vec3 playerRight;
+  vec3 playerForward;
+
+  mat4 playerRotation;
 
   vec3 playerPosition;
   vec2 playerSize;
@@ -159,7 +181,6 @@ struct GameState {
 
   uint32 currentFace;
 
-  quat cameraOffset;
   quat cameraRotation;
 
   quat rotStart;
@@ -263,18 +284,27 @@ void gameState_disableAllPastPlayers(GameState* g) {
   }
 }
 
-void gameStateInit(State* state) {
+void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
   
   timeBox_init(&g->timeBox, "simple");
 
   g->cameraUp = g->cameraRight = {0};
-  g->cameraOffset = quatFromPitchYawRoll(ROTATION_OFFSET, 0, 0);
   g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
+  
+  g->playerUp = vec3(0, 1, 0);
+  g->playerRight = vec3(1, 0, 0);
+  g->playerForward = vec3(0, 0, -1);
+
+  g->playerRotation = mat4d(1.0f);
+
+  logfln("up: %f %f %f", g->playerUp.x, g->playerUp.y, g->playerUp.z);
+  logfln("right: %f %f %f", g->playerRight.x, g->playerRight.y, g->playerRight.z);
+  logfln("forward: %f %f %f", g->playerForward.x, g->playerForward.y, g->playerForward.z);
 
   g->playerSize = vec2(1.0, 1.8)/2;
-  g->playerPosition = vec3(-g->playerSize.x/2, -g->playerSize.y/2, 1.51f);
+  g->playerPosition = vec3(-g->playerSize.x/2, -g->playerSize.y/2, 1.5f);
 
   g->rotState = ROT_IDLE;
   g->rotStartTime = getTime();
@@ -338,11 +368,11 @@ void gameStateInit(State* state) {
 
   // Player
   real32 quadData[] = {
-    // Verts    UVs
-    0, 0, 0,    0, 0,
-    0, 1, 0,    0, 1,
-    1, 0, 0,    1, 0,
-    1, 1, 0,    1, 1
+    // Verts                UVs
+    -0.5f, -0.5f, 0.0f,    0.0f, 0.0f,
+    -0.5f,  0.5f, 0.0f,    0.0f, 1.0f,
+     0.5f, -0.5f, 0.0f,    1.0f, 0.0f,
+     0.5f,  0.5f, 0.0f,    1.0f, 1.0f
   };
 
   GLuint quadVAO, quadVBO;
@@ -404,7 +434,7 @@ void gameStateInit(State* state) {
   }
 }
 
-void gameStateUpdate(State* state) {
+void gameState_update(State* state) {
   GameState* g = (GameState*) state->memory;
   TimeBox *tb = &g->timeBox;
 
@@ -540,6 +570,10 @@ void gameStateUpdate(State* state) {
   if (keyUp(KEY_shift)) {
     vec3 up = g->cameraUp;
     vec3 right = g->cameraRight;
+
+    /*
+    vec3 up = g->playerForward;
+    vec3 right = g->playerRight;*/
     vec3 movement = vec3(0, 0, 0);
 
     float speed = 2;
@@ -634,12 +668,61 @@ void gameStateUpdate(State* state) {
     if (getTime() > g->rotStartTime + ROTATION_DURATION) {
       pc = 1.0f;
 
-      g->currentFace = faceRotationMap[g->currentFace][g->rotState];
+      if (g->rotState == ROT_FORWARD) {
+        logln("forward");
+
+        mat4 rot = HMM_Rotate(-90.0f, g->playerRight);
+
+        g->playerRotation = g->playerRotation * rot;
+
+        vec4 fwd = rot * vec4FromVec3(g->playerForward);
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerForward = vec3FromVec4(fwd);
+        g->playerUp = vec3FromVec4(up);
+      } else if (g->rotState == ROT_LEFT) {
+        logln("left");
+        mat4 rot = HMM_Rotate(90.0f, g->playerForward);
+
+        g->playerRotation = g->playerRotation * rot;
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        vec4 rgt = rot * vec4FromVec3(g->playerRight);
+        g->playerUp = vec3FromVec4(up);
+        g->playerRight = vec3FromVec4(rgt);
+      } else if (g->rotState == ROT_BACKWARD) {
+        logln("backward");
+        mat4 rot = HMM_Rotate(90.0f, g->playerRight);
+
+        g->playerRotation = g->playerRotation * rot;
+
+        vec4 fwd = rot * vec4FromVec3(g->playerForward);
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerForward = vec3FromVec4(fwd);
+        g->playerUp = vec3FromVec4(up);     
+      } else if (g->rotState == ROT_RIGHT) {
+        logln("right");
+        mat4 rot = HMM_Rotate(-90.0f, g->playerForward);
+
+        g->playerRotation = g->playerRotation * rot;
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        vec4 rgt = rot * vec4FromVec3(g->playerRight);
+        g->playerUp = vec3FromVec4(up);
+        g->playerRight = vec3FromVec4(rgt);     
+      }
+
+      logfln("up: %f %f %f", g->playerUp.x, g->playerUp.y, g->playerUp.z);
+      logfln("right: %f %f %f", g->playerRight.x, g->playerRight.y, g->playerRight.z);
+      logfln("forward: %f %f %f", g->playerForward.x, g->playerForward.y, g->playerForward.z);
+
+      uint32 nextFace = faceRotationMap[g->currentFace][g->rotState];
+
+      g->currentFace = nextFace;
 
       g->rotState = ROT_IDLE;
     }
 
-    real32 amount = deg2Rad(90.0f) * (pc * pc);
+    real32 amount = 90.0f * (pc * pc);
 
     quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
 
@@ -651,7 +734,7 @@ void gameStateUpdate(State* state) {
   glClearColor(18.0f/255, 26.0f/255, 47.0f/255, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  vec3 cameraPosition = vec3(0.0f, 0.0f, -8.0f);
+  vec3 cameraPosition = vec3(0.0f, 0.0f, CAMERA_POSITION_OFFSET_Z);
 
   mat4 view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
@@ -662,7 +745,9 @@ void gameStateUpdate(State* state) {
 
   view = mat4d(1);
   view = mat4Translate(view, cameraPosition);
-  view = view * quatToMat4(g->cameraOffset * g->cameraRotation);
+
+  quat cameraOffset = quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0);
+  view = view * quatToMat4(cameraOffset * g->cameraRotation);
 
   mat4 projection = mat4Perspective(70.0f, (real32) getWindowWidth() / (real32) getWindowHeight(), 0.1f, 10000.0f);
 
@@ -685,19 +770,23 @@ void gameStateUpdate(State* state) {
   }
 
   {
-    Shader s = shader(SHADER_billboard);
+    Shader s = shader(SHADER_default);
     Texture t = texture(TEXTURE_player);
 
     glUseProgram(s.id);
 
+    vec3 pivot = vec3(0, -0.5f, 0.0);
+
     mat4 model = mat4d(1.0f);
-    model = mat4Translate(mat4d(1), g->playerPosition);
+    model = mat4Translate(model, pivot);
+    model = mat4Translate(model, g->playerPosition + vec3(0.0f, 0.5f, 0.0));
+    model = mat4Rotate(model * g->playerRotation, 90.0f, vec3(1, 0, 0));
+    model = mat4Scale(model, vec3(g->playerSize.x, g->playerSize.y, 1));
+    model = mat4Translate(model, pivot * -1);
 
     shaderSetMatrix(&s, "model", model);
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
-
-    shaderSetVec2(&s, "scale", g->playerSize);
 
     glBindTexture(GL_TEXTURE_2D, t.id);
     glBindVertexArray(g->quadVAO);

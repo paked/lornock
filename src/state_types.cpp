@@ -1,1 +1,2 @@
 stateType(game)
+stateType(test)

@@ -7,10 +7,11 @@ enum {
 
 // Include states here
 #include <game_state.cpp>
+#include <test_state.cpp>
 
 void stateInit(State *state, StateType type) {
   switch (type) {
-#define stateType(name) case STATE_ ## name: { name ## StateInit(state); break; }
+#define stateType(name) case STATE_ ## name: { name ## State_init(state); break; }
 #include <state_types.cpp>
 #undef stateType
     default: break;
@@ -24,7 +25,7 @@ void stateInit(State *state, StateType type) {
 void stateUpdate(State *state) {
   // TODO(harrison): handle state changing
   switch (state->type) {
-#define stateType(name) case STATE_ ## name: { name ## StateUpdate(state); } break;
+#define stateType(name) case STATE_ ## name: { name ## State_update(state); } break;
 #include <state_types.cpp>
 #undef stateType
     default: break;

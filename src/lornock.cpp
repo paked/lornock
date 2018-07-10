@@ -49,7 +49,7 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   if (!m->initialized) {
     stbi_set_flip_vertically_on_load(true);
 
-    stateInit(&lornockData->state, STATE_game);
+    stateInit(&lornockData->state, STATE_test);
 
     // Refresh assets
     updateAssets();

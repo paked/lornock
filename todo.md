@@ -65,3 +65,39 @@ Eventually:
 1. Probably should look into writing some sort of allocator so it is easier to access the TransientStorage
 2. I AM GOING TO REWRITE THE READING OF ACTIONS SO THAT IT READS STRAIGHT FROM THE FILE MEMORY BUFFER AND PARSES EACH ACTION AT RUNTIME. IT IS NOT SUPER EFFICIENT BUT IT IS THE EASIEST WAY TO START.
 3. Each time the player jumps backwards or forwards in time THEY SHOULD WRITE THEIR PENDING ACTIONS.
+
+## Example code:
+
+```cpp
+// On every rotation
+if (g->rotState == ROT_FORWARD) {
+  g->playerPitch = g->playerPitch * quatFromPitchYawRoll(-90.0f, 0, 0);
+  g->playerPitch = quatNormalize(g->playerPitch);
+} else if (g->rotState == ROT_BACKWARD) {
+  g->playerPitch = g->playerPitch * quatFromPitchYawRoll(90.0f, 0, 0);
+  g->playerPitch = quatNormalize(g->playerPitch);
+} else if (g->rotState == ROT_LEFT) {
+  g->playerRoll = g->playerRoll * quatFromPitchYawRoll(0, 0, 90.0f);
+  g->playerRoll = quatNormalize(g->playerRoll);
+} else if (g->rotState == ROT_RIGHT) {
+  g->playerRoll = g->playerRoll * quatFromPitchYawRoll(0, 0, -90.0f);
+  g->playerRoll = quatNormalize(g->playerRoll);
+}
+
+...
+
+// On update
+quat playerOffset = quatFromPitchYawRoll(90, 0, 0); // We start on the front face, so player needs to be at 90 degrees
+playerOffset = playerOffset * (g->playerYaw * g->playerPitch * g->playerRoll);
+
+vec3 pivot = vec3(0, -0.5f, 0.0);
+
+mat4 model = mat4d(1.0f);
+model = mat4Translate(model, pivot);
+model = mat4Translate(model, g->playerPosition + vec3(0.0f, 0.5f, 0.0));
+model = model * quatToMat4(playerOffset);
+model = mat4Scale(model, vec3(g->playerSize.x, g->playerSize.y, 1));
+model = mat4Translate(model, pivot * -1);
+
+// Draw w/ shader, etc.
+```

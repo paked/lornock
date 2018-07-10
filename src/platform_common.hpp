@@ -19,8 +19,8 @@
 #define PI  3.1415926535897
 #define PIf 3.1415926f
 
-#define rad2Deg(a) ((a) * (180/PIf))
-#define deg2Rad(a) ((a) * (PIf/180))
+#define rad2Deg(a) ((a) * (180.0f/PIf))
+#define deg2Rad(a) ((a) * (PIf/180.0f))
 
 typedef int8_t    int8;
 typedef int16_t   int16;
