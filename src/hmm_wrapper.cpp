@@ -11,9 +11,6 @@ typedef hmm_quaternion quat;
 #define vec4(x, y, z, w)  HMM_Vec4(x, y, z, w)
 #define mat4d(d) HMM_Mat4d(d)
 
-#define vec4FromVec3(v) vec4(v.x, v.y, v.z, 0.0f)
-#define vec3FromVec4(v) vec3(v.x, v.y, v.z);
-
 #define quatNormalize(q) HMM_NormalizeQuaternion(q)
 #define quatToMat4(q) HMM_QuaternionToMat4(q)
 #define quatFromAxisAngle(axis, angle) HMM_QuaternionFromAxisAngle(axis, angle)
@@ -28,7 +25,14 @@ typedef hmm_quaternion quat;
 #define mat4Rotate(m, a, v) HMM_Multiply(m, HMM_Rotate(a, v))
 
 #define vec3Normalize(v) HMM_NormalizeVec3(v)
+#define vec3FromVec4(v) vec3(v.x, v.y, v.z)
+
 #define vec4Normalize(v) HMM_NormalizeVec4(v)
+#define vec4FromVec3(v) vec4(v.x, v.y, v.z, 0.0f)
+
+real32 vec3Sum(vec3 v) {
+  return (v.x + v.y + v.z);
+}
 
 bool vec3AlmostEqual(vec3 a, vec3 b, real32 e=0.1) {
   return fabs(b.x - a.x) < e &&
