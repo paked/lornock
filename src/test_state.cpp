@@ -7,12 +7,14 @@ enum {
 
 vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
   // UP                       Right                     Forward
-  { vec3(0.0f, 0.0f, -1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f) },  // Back face
-  { vec3(0.0f, 0.0f, 1.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },   // Front face
-  { vec3(-1.0f, 0.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Left face
-  { vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f),  vec3(0.0f, -1.0f, 0.0f) },  // Right face
+  { vec3(0.0f, 0.0f, 1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Back face
+  { vec3(0.0f, 0.0f, -1.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f) },   // Front face
+
+  { vec3(-1.0f, 0.0f, 0.0f),  vec3(0.0f, 1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Left face
+  { vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Right face
+
   { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) },  // Top face
-  { vec3(0.0f, -1.0f, 0.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }   // Bottom face
+  { vec3(0.0f, -1.0f, 0.0f),  vec3(1.0f, 0.0f, 0.0f),  vec3(0.0f, 0.0f, 1.0f) }  // Bottom face
 };
 
 struct TestState {
@@ -34,6 +36,14 @@ struct TestState {
   // Camera
   quat cameraRotation;
 
+  // Rotation animation
+  bool rotating;
+  uint32 startTime;
+  real32 pitchEnd;
+  real32 yawEnd;
+  real32 rollEnd;
+  quat start;
+
   GLuint quadVAO;
   GLuint cubeVAO;
 };
@@ -53,7 +63,24 @@ void testState_init(State* state) {
 
   g->rotMat = HMM_Rotate(0.0f, g->right);
 
-  g->cameraRotation = quatFromPitchYawRoll(0, 0, 0);
+  g->cameraRotation = quatFromPitchYawRoll(90.0f, 0, 0);
+
+  g->rotating = false;
+  g->startTime = 0;
+  g->pitchEnd = 0;
+  g->yawEnd = 0;
+  g->rollEnd = 0;
+
+  {
+    mat4 rot = HMM_Rotate(90.0f, g->forward);
+
+    vec4 forward = vec4FromVec3(g->forward);
+
+    vec4 right = rot * vec4FromVec3(g->right);
+    vec4 up = rot * vec4FromVec3(g->up);
+
+    logfln("RIGHT. vec3(%.1f,%.1f,%.1f), vec3(%.1f,%.1f,%.1f), vec3(%.1f,%.1f,%.1f)", up.x, up.y, up.z, right.x, right.y, right.z, forward.x, forward.y, forward.z);
+  }
 
   {
     mat4 view = mat4d(1);
@@ -183,8 +210,12 @@ void testState_rotate(TestState* g, uint32 direction) {
   g->rotMat = g->rotMat * rot;
   g->currentFace = faceRotationMap[g->currentFace][direction];
 
-  g->cameraRotation = quatFromPitchYawRoll(90.0f * pitchFactor, 90.0f * yawFactor, 0) * g->cameraRotation;
-  g->cameraRotation = quatNormalize(g->cameraRotation);
+  g->rotating = true;
+  g->start = g->cameraRotation;
+  g->startTime = getTime();
+  g->pitchEnd = 90.0f * pitchFactor;
+  g->yawEnd = 90.0f * yawFactor;
+  g->rollEnd = 0.0f;
 
   logln("new:");
   printFace(g->currentFace);
@@ -202,41 +233,69 @@ void testState_update(State* state) {
   real32 dt = getDt();
 
   if (keyDown(KEY_a)) {
-    g->pos -= g->faceRight * dt * speed;
+    g->pos -= g->right * dt * speed;
   }
 
   if (keyDown(KEY_d)) {
-    g->pos += g->faceRight * dt * speed;
+    g->pos += g->right * dt * speed;
   }
 
   if (keyDown(KEY_w)) {
-    g->pos += g->faceForward * dt * speed;
+    g->pos += g->forward * dt * speed;
   }
 
   if (keyDown(KEY_s)) {
-    g->pos -= g->faceForward * dt * speed;
+    g->pos -= g->forward * dt * speed;
   }
 
   if (keyJustDown(KEY_shift)) {
-    vec3 realRight = faceCardinalDirections[g->currentFace][DIRECTION_RIGHT];
-    vec3 realForward = faceCardinalDirections[g->currentFace][DIRECTION_FORWARD];
+    uint32 rightDir = DIRECTION_RIGHT;
+    uint32 forwardDir = DIRECTION_FORWARD;
+
+    vec3 realRight = faceCardinalDirections[g->currentFace][rightDir];
+    vec3 realForward = faceCardinalDirections[g->currentFace][forwardDir];
     vec3 realUp = faceCardinalDirections[g->currentFace][DIRECTION_UP];
+
+    realRight = g->faceRight;
+    realForward = g->faceForward * -1;
 
     real32 rightLen = vec3Sum(g->pos * realRight);
     real32 forwardLen = vec3Sum(g->pos * realForward);
 
-    if (abs(rightLen) > 0) {
-      logfln("rightlen: %f, forwardlen: %f", rightLen, forwardLen);
+    /*
+    if (g->currentFace == LEFT || g->currentFace == RIGHT) {
+      real32 temp = rightLen;
+      rightLen = forwardLen;
+      forwardLen = temp;
+      logln("WHAT?");
+    }*/
+
+    logfln("rightlen: %f, forwardlen: %f", rightLen, forwardLen);
+
+    if (fabs(rightLen) > 1.49f) {
       testState_rotate(g, (rightLen > 0) ? ROT_RIGHT : ROT_LEFT);
-    } else if (abs(forwardLen) > 0) {
-      logfln("rightlen: %f, forwardlen: %f", rightLen, forwardLen);
-      testState_rotate(g, (forwardLen > 0) ? ROT_FORWARD : ROT_BACKWARD);
+    } else if (fabs(forwardLen) > 1.49f) {
+      testState_rotate(g, (forwardLen < 0) ? ROT_FORWARD : ROT_BACKWARD);
     }
   }
 
   g->pos.x = clamp(g->pos.x, -1.5f, 1.5f);
   g->pos.y = clamp(g->pos.y, -1.5f, 1.5f);
   g->pos.z = clamp(g->pos.z, -1.5f, 1.5f);
+
+  if (g->rotating) {
+    real32 pc = 1.0f - ((float) ((g->startTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
+
+    if (getTime() > g->startTime + ROTATION_DURATION) {
+      pc = 1.0f;
+      g->rotating = false;
+    }
+
+    pc = pc * pc;
+
+    g->cameraRotation = quatFromPitchYawRoll(g->pitchEnd * pc, g->yawEnd * pc, g->rollEnd * pc) * g->start;
+    g->cameraRotation = quatNormalize(g->cameraRotation);
+  }
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -248,7 +307,6 @@ void testState_update(State* state) {
   mat4 view = mat4d(1.0f);
   view = mat4LookAt(view, cameraPos, vec3(0, 0, 0));*/
 
-
   {
     mat4 view = mat4d(1);
     view = mat4Translate(view, vec3(0.0f, 0.0f, -8.0f));
@@ -258,7 +316,7 @@ void testState_update(State* state) {
     g->faceForward = vec3(view[0][1], view[1][1], view[2][1]);
   }
 
-  quat offset = quatFromPitchYawRoll(30.0f, 0, 0);
+  quat offset = quatFromPitchYawRoll(-30.0f, 0, 0);
 
   mat4 view = mat4d(1.0f);
   view = mat4Translate(view, vec3(0.0f, 0.0f, -8.0f));
