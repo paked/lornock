@@ -19,10 +19,16 @@ Todo:
     - Create a divide between `FrameStorage` (memory which gets killed after the end of a frame), `TransientStorage` (memory which can be killed at any point and regenerated if need be, usually lasts many frames though)
 
 In progress:
-- [IN PROGRESS] Windows support
+- [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
   - [ ] Write win32 platform code
+- [ ] Fix the whole billboarding/camera rotation shenangian
+  - _HOLY FUCK I'VE SPENT LIKE A WEEK ON THIS SHIT._
+  - [x] Refactor code into self contained chunks
+  - [x] Create player as a "point" which can traverse the chunk
+  - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
+  - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
 - [x] Begin work porting time travel code over

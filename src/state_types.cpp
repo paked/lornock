@@ -1,2 +1,1 @@
 stateType(game)
-stateType(test)

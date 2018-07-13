@@ -115,7 +115,7 @@ int main(void) {
   }
 
   if (SDL_GL_SetSwapInterval(1) < 0) {
-    logfln("ERROR: could not set SDL swap interval %s", SDL_GetError());
+    logfln("ERROR: could not set SDL swap interval: %s", SDL_GetError());
 
     // TODO(harrison): create an internal system for handling framerate if
     // vsync doesn't exist

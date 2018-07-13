@@ -28,7 +28,6 @@ void printFace(uint32 f) {
   }
 }
 
-#define ROTATION_DURATION 400
 enum {
   ROT_FORWARD,
   ROT_BACKWARD,
@@ -52,6 +51,25 @@ void printRot(uint32 r) {
   }
 }
 
+enum {
+  DIRECTION_UP,
+  DIRECTION_RIGHT,
+  DIRECTION_FORWARD,
+  MAX_DIRECTION
+};
+
+vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
+  // UP                       Right                     Forward
+  { vec3(0.0f, 0.0f, 1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Back face
+  { vec3(0.0f, 0.0f, -1.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f) },   // Front face
+
+  { vec3(-1.0f, 0.0f, 0.0f),  vec3(0.0f, 1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Left face
+  { vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Right face
+
+  { vec3(0.0f, -1.0f, 0.0f),  vec3(1.0f, 0.0f, 0.0f),  vec3(0.0f, 0.0f, 1.0f) },  // Bottom face
+  { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }  // Top face
+};
+
 uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
   //  FWD     BWD     LWD     RWD
   {   BOTTOM, TOP,    LEFT,   RIGHT },  // Back face
@@ -61,138 +79,6 @@ uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
   {   FRONT,  BACK,   LEFT,   RIGHT },  // Bottom face
   {   BACK,   FRONT,  LEFT,   RIGHT }   // Top face
 };
-
-struct PastPlayer {
-  bool exists;
-  bool moving;
-
-  vec3 start;
-  vec3 destination;
-
-  uint64 sequence;
-  uint64 nextSequence;
-
-  vec3 pos;
-
-  uint32 startTime;
-  uint32 duration;
-};
-
-void pastPlayer_target(PastPlayer* pp, TimeBox *tb) {
-  Action next;
-  
-  if (!timeBox_findNextActionInSequenceOfType(tb, &next, pp->sequence, MOVE)) {
-    logln("SETTING PLAYER TO IMMOBILE");
-    pp->moving = false;
-
-    return;
-  }
-
-  pp->destination = next.move.pos;
-  pp->startTime = getTime();
-  pp->duration = (real32) TIME_BOX_TICK_MS_INTERVAL * (real32)(next.move.time - tb->time);
-
-  pp->nextSequence = next.move.sequence;
-}
-
-void pastPlayer_init(PastPlayer* pp, TimeBox* tb, Action first) {
-  pp->exists = true;
-  pp->moving = true;
-
-  pp->sequence = first.common.sequence;
-
-  vec3 pos = {0};
-
-  if (first.type == MOVE) {
-    pos = first.move.pos;
-  } else if(first.type == SPAWN) {
-    pos = first.spawn.pos;
-  } else {
-    logln("ERROR: invalid action to init a pastPlayer with");
-  }
-
-  pp->pos = pp->start = pos;
-
-  pastPlayer_target(pp, tb);
-}
-
-void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
-  Action a;
-  if (!timeBox_findNextActionInSequence(tb, &a, pp->sequence)) {
-    logfln("WARNING: PastPlayer should have been killed before this point: %ld", pp->sequence);
-
-    pp->exists = false;
-  }
-
-  if (a.type == JUMP) {
-    pp->exists = false;
-
-    return;
-  }
-
-  if (!pp->moving) {
-    return;
-  }
-
-  real32 pc = 1.0f - ((real32) ((pp->startTime + pp->duration) - getTime())) / (pp->duration); 
-  pc = clamp(pc, 0, 1);
-
-  pp->pos = vec3Lerp(pc, pp->start, pp->destination);
-
-  if (getTime() > pp->startTime + pp->duration) {
-    pp->pos = pp->destination;
-    pp->sequence = pp->nextSequence;
-    pp->start = pp->destination;
-
-    pastPlayer_target(pp, tb);
-  }
-}
-
-#define CAMERA_ROTATION_OFFSET (-40)
-#define CAMERA_POSITION_OFFSET_Z (-6.25f)
-
-#define MAX_PAST_PLAYERS 10
-
-struct GameState {
-  uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
-
-  uint64 asteroidVertCount;
-  GLuint asteroidVAO;
-  GLuint asteroidVBO;
-
-  vec3 playerUp;
-  vec3 playerRight;
-  vec3 playerForward;
-
-  mat4 playerRotation;
-
-  vec3 playerPosition;
-  vec2 playerSize;
-  vec3 playerLastMove;
-
-  GLuint quadVAO;
-  GLuint quadVBO;
-
-  GLuint cubeVAO;
-  GLuint cubeVBO;
-
-  vec3 cameraUp;
-  vec3 cameraRight;
-
-  uint32 currentFace;
-
-  quat cameraRotation;
-
-  quat rotStart;
-  uint32 rotState;
-  uint32 rotStartTime;
-
-  PastPlayer pastPlayers[MAX_PAST_PLAYERS];
-
-  TimeBox timeBox;
-};
-
-uint64 faceLength = 30;
 
 bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
   int offsetX = 0;
@@ -246,10 +132,10 @@ bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int
 }
 
 void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
-  real32 cube[] = cubeMesh;
+  real32 cube[] = CUBE_MESH_DATA;
 
-  uint64 start = d * faceLength;
-  uint64 end = start + faceLength;
+  uint64 start = d * CUBE_MESH_DATA_FACE_LENGTH;
+  uint64 end = start + CUBE_MESH_DATA_FACE_LENGTH;
 
   for (uint64 i = start; i < end; i++) {
     real32 v = cube[i];
@@ -264,54 +150,76 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   }
 }
 
-int gameState_getFirstPastPlayer(GameState* g) {
-  int id = -1;
+#define CAMERA_ROTATION_OFFSET (-30)
+#define CAMERA_POSITION (vec3(0, 0.0f, -7.25f))
+#define MAX_PAST_PLAYERS 10
+#define ROTATION_DURATION 400
 
-  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
-    if (!g->pastPlayers[i].exists) {
-      id = i;
+struct GameState {
+  uint32 currentFace;
+  vec3 faceRight;
+  vec3 faceForward;
 
-      break;
-    }
-  }
+  vec3 playerUp;
+  vec3 playerRight;
+  vec3 playerForward;
+  vec3 playerPos;
+  mat4 playerRotation;
 
-  return id;
-}
+  quat cameraRotation;
 
-void gameState_disableAllPastPlayers(GameState* g) {
-  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
-    g->pastPlayers[i].exists = false;
-  }
+  bool rotating;
+  uint32 rotatingStartTime;
+  real32 rotatingPitchEnd;
+  real32 rotatingYawEnd;
+  real32 rotatingRollEnd;
+  quat rotatingStart;
+
+  uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
+  GLuint worldVAO;
+  uint32 worldVertCount;
+
+  GLuint cubeVAO;
+};
+
+void gameState_setFaceDirections(GameState* g) {
+  mat4 view = mat4d(1);
+  view = mat4Translate(view, CAMERA_POSITION);
+  view = view * quatToMat4(g->cameraRotation);
+
+  g->faceRight = vec3(view[0][0], view[1][0], view[2][0]);
+  g->faceForward = vec3(view[0][1], view[1][1], view[2][1]);
 }
 
 void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
-  
-  timeBox_init(&g->timeBox, "simple");
 
-  g->cameraUp = g->cameraRight = {0};
-  g->cameraRotation = quatFromAxisAngle(vec3(1, 0, 0), 0);
-  
-  g->playerUp = vec3(0, 1, 0);
-  g->playerRight = vec3(1, 0, 0);
-  g->playerForward = vec3(0, 0, -1);
+  g->currentFace = TOP;
+  gameState_setFaceDirections(g); // g->faceRight, g->faceForward
 
+  g->playerUp = faceCardinalDirections[g->currentFace][DIRECTION_UP];
+  g->playerRight = faceCardinalDirections[g->currentFace][DIRECTION_RIGHT];
+  g->playerForward = faceCardinalDirections[g->currentFace][DIRECTION_FORWARD];
+  g->playerPos = vec3(0.0f, 1.5f, 0.0f);
   g->playerRotation = mat4d(1.0f);
 
-  logfln("up: %f %f %f", g->playerUp.x, g->playerUp.y, g->playerUp.z);
-  logfln("right: %f %f %f", g->playerRight.x, g->playerRight.y, g->playerRight.z);
-  logfln("forward: %f %f %f", g->playerForward.x, g->playerForward.y, g->playerForward.z);
+  g->cameraRotation = quatFromPitchYawRoll(90.0f, 0.0f, 0.0f);
 
-  g->playerSize = vec2(1.0, 1.8)/2;
-  g->playerPosition = vec3(-g->playerSize.x/2, -g->playerSize.y/2, 1.5f);
+  g->rotating = false;
+  g->rotatingStartTime = 0;
+  g->rotatingPitchEnd = 0;
+  g->rotatingYawEnd = 0;
+  g->rotatingRollEnd = 0;
+  g->rotatingStart = quatFromPitchYawRoll(0.0f, 0.0f, 0.0f);
 
-  g->rotState = ROT_IDLE;
-  g->rotStartTime = getTime();
-
-  g->currentFace = FRONT;
-
-  gameState_disableAllPastPlayers(g);
+  for (int y = 0; y < WORLD_HEIGHT; y++) {
+    for (int z = 0; z < WORLD_DEPTH; z++) {
+      for (int x = 0; x < WORLD_WIDTH; x++) {
+        g->world[y][z][x] = 1;
+      }
+    }
+  }
 
   // init world
   for (int y = 0; y < WORLD_HEIGHT; y++) {
@@ -345,17 +253,14 @@ void gameState_init(State* state) {
     }
   }
 
-  g->asteroidVertCount = count;
+  GLuint worldVAO, worldVBO;
+  glGenVertexArrays(1, &worldVAO);
 
-  GLuint asteroidVAO;
-  GLuint asteroidVBO;
-  glGenVertexArrays(1, &asteroidVAO);
+  glGenBuffers(1, &worldVBO);
 
-  glGenBuffers(1, &asteroidVBO);
+  glBindVertexArray(worldVAO);
 
-  glBindVertexArray(asteroidVAO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, asteroidVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, worldVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * count, verts, GL_STATIC_DRAW);
 
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
@@ -363,38 +268,11 @@ void gameState_init(State* state) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  g->asteroidVAO = asteroidVAO;
-  g->asteroidVBO = asteroidVBO;
-
-  // Player
-  real32 quadData[] = {
-    // Verts                UVs
-    -0.5f, -0.5f, 0.0f,    0.0f, 0.0f,
-    -0.5f,  0.5f, 0.0f,    0.0f, 1.0f,
-     0.5f, -0.5f, 0.0f,    1.0f, 0.0f,
-     0.5f,  0.5f, 0.0f,    1.0f, 1.0f
-  };
-
-  GLuint quadVAO, quadVBO;
-
-  glGenVertexArrays(1, &quadVAO);
-  glBindVertexArray(quadVAO);
-
-  glGenBuffers(1, &quadVBO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quadData), quadData, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  g->quadVAO = quadVAO;
-  g->quadVBO = quadVBO;
+  g->worldVAO = worldVAO;
+  g->worldVertCount = count;
 
   // Cube
-  real32 cubeData[] = cubeMesh;
+  real32 cubeData[] = CUBE_MESH_DATA;
 
   GLuint cubeVAO, cubeVBO;
 
@@ -412,386 +290,168 @@ void gameState_init(State* state) {
   glEnableVertexAttribArray(1);
 
   g->cubeVAO = cubeVAO;
-  g->cubeVBO = cubeVBO;
 
-  // Asset requests
   assetsRequestShader(SHADER_default);
-  assetsRequestShader(SHADER_billboard);
   assetsRequestTexture(TEXTURE_test);
-  assetsRequestTexture(TEXTURE_rock);
   assetsRequestTexture(TEXTURE_player);
-
-  Action a;
-
-  if (!timeBox_findLastActionInSequenceOfType(&g->timeBox, &a, g->timeBox.sequence, MOVE)) {
-    logln("ERROR: could not find last action of type.");
-
-    // FIXME(harrison): Add in some sort of safeguard to stop this from happening
-  } else {
-    g->playerPosition = a.move.pos;
-
-    logfln("%f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
-  }
+  assetsRequestTexture(TEXTURE_rock);
 }
 
-void gameState_update(State* state) {
-  GameState* g = (GameState*) state->memory;
-  TimeBox *tb = &g->timeBox;
+void gameState_rotate(GameState* g, uint32 direction) {
+  real32 pitchFactor = 0.0f;
+  real32 yawFactor = 0.0f;
 
-  if (getTime() > tb->nextTickTime) {
-    tb->nextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
+  mat4 rot;
 
-    Action a;
-    while (timeBox_nextAction(tb, &a)) {
-      action_print(a);
-
-      switch (a.type) {
-        case SPAWN:
-          {
-            int id = gameState_getFirstPastPlayer(g);
-            if (id < 0) {
-              logln("WARNING: too many active past players!");
-
-              continue;
-            }
-
-            pastPlayer_init(&g->pastPlayers[id], tb, a);
-          } break;
-        default:
-          {
-            // We don't need to do anything
-          } break;
-      }
-    }
-
-    tb->time += 1;
-  }
-
-  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
-    if (!g->pastPlayers[i].exists) {
-      continue;
-    }
-
-    pastPlayer_update(&g->pastPlayers[i], tb);
-  }
-
-  if (keyJustDown(KEY_tab)) {
-    int64 dest = 10;
-
-    timeBox_add(tb, action_makeJump(dest));
-    tb->jumpID += 1;
-    timeBox_save(tb);
-    timeBox_read(tb, "simple");
-    timeBox_setTime(tb, dest);
-    timeBox_add(tb, action_makeSpawn(g->playerPosition));
-
-    gameState_disableAllPastPlayers(g);
-
-    uint32 lineLen = 0;
-    char* line = (char*) lornockMemory->transientStorage;
-
-    uint32 upTo = 0;
-
-    while (upTo < tb->rawLen) {
-      getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
-
-      upTo += 1;
-
-      Action spawnAction;
-
-      if (!action_parse(&spawnAction, line, lineLen)) {
-        logln("Could not parse line!");
-
-        continue;
-      }
-
-      if (spawnAction.common.time > tb->time) {
-        break;
-      }
-
-      if (spawnAction.type != SPAWN) {
-        continue;
-      }
-
-      bool needPastPlayer = true;
-      uint32 searchUpTo = upTo;
-
-      Action lastAction = spawnAction;
-
-      while (searchUpTo < tb->rawLen) {
-        getLine(line, &lineLen, &searchUpTo, tb->raw, tb->rawLen);
-        searchUpTo += 1;
-
-        Action jumpAction;
-
-        if (!action_parse(&jumpAction, line, lineLen)) {
-          logln("Could not parse line!");
-
-          continue;
-        }
-
-        if (jumpAction.common.time > tb->time) {
-          break;
-        }
-
-        if (jumpAction.common.jumpID == spawnAction.common.jumpID && jumpAction.type == MOVE) {
-          lastAction = jumpAction;
-        }
-
-        if (jumpAction.common.type != JUMP || jumpAction.common.jumpID != spawnAction.common.jumpID) {
-          continue;
-        }
-
-        needPastPlayer = false;
-
-        break;
-      }
-
-      if (needPastPlayer) {
-        int id = gameState_getFirstPastPlayer(g);
-        if (id < 0) {
-          logln("WARNING: too many active past players!");
-
-          continue;
-        }
-
-        logln("SPAWNED REMOTE PAST PLAYER");
-
-        pastPlayer_init(&g->pastPlayers[id], tb, lastAction);
-      }
-    }
-  }
-
-  if (keyJustDown(KEY_l)) {
-    timeBox_save(tb);
-  }
-
-  /* updating */
-  if (keyUp(KEY_shift)) {
-    vec3 up = g->cameraUp;
-    vec3 right = g->cameraRight;
-
-    /*
-    vec3 up = g->playerForward;
-    vec3 right = g->playerRight;*/
-    vec3 movement = vec3(0, 0, 0);
-
-    float speed = 2;
-
-    if (keyDown(KEY_w)) {
-      movement += up;
-    }
-
-    if (keyDown(KEY_s)) {
-      movement -= up;
-    }
-
-    if (keyDown(KEY_d)) {
-      movement += right;
-    }
-
-    if (keyDown(KEY_a)) {
-      movement -= right;
-    }
-
-    g->playerPosition += movement * speed * getDt();
-
-    if (!vec3AlmostEqual(movement, g->playerLastMove)) {
-      timeBox_add(tb, action_makeMove(g->playerPosition));
-
-      g->playerLastMove = movement;
-    }
-  }
-
-  g->playerPosition.x = clamp(g->playerPosition.x, -1.5f, 1.5f);
-  g->playerPosition.y = clamp(g->playerPosition.y, -1.5f, 1.5f);
-  g->playerPosition.z = clamp(g->playerPosition.z, -1.5f, 1.5f);
-
-  real32 rollFactor = 0;
-  real32 pitchFactor = 0;
-  real32 yawFactor = 0;
-
-  switch (g->rotState) {
-    case ROT_IDLE:
-      {
-        if (!keyDown(KEY_shift)) {
-          break;
-        }
-
-        bool starting = false;
-        if (keyJustDown(KEY_w)) {
-          g->rotState = ROT_FORWARD;
-
-          starting = true;
-        } else if (keyJustDown(KEY_s)) {
-          g->rotState = ROT_BACKWARD;
-
-          starting = true;
-        } else if (keyJustDown(KEY_a)) {
-          g->rotState = ROT_LEFT;
-          
-          starting = true;
-        } else if (keyJustDown(KEY_d)) {
-          g->rotState = ROT_RIGHT;
-
-          starting = true;
-        }
-
-        if (starting) {
-          g->rotStart = g->cameraRotation;
-          g->rotStartTime = getTime();
-        }
-
-        break;
-      }
+  switch(direction) {
     case ROT_FORWARD:
       {
-        rollFactor = 1.0;
+        pitchFactor = 1.0f;
+
+        rot = HMM_Rotate(-90.0f, g->playerRight);
+
+        vec4 forward = rot * vec4FromVec3(g->playerForward);
+        g->playerForward = vec3FromVec4(forward);
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerUp = vec3FromVec4(up);
       } break;
     case ROT_BACKWARD:
       {
-        rollFactor = -1.0;
+        pitchFactor = -1.0f;
+
+        rot = HMM_Rotate(90.0f, g->playerRight);
+
+        vec4 forward = rot * vec4FromVec3(g->playerForward);
+        g->playerForward = vec3FromVec4(forward);
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerUp = vec3FromVec4(up);
       } break;
     case ROT_LEFT:
       {
-        pitchFactor = 1.0;
+        yawFactor = 1.0f;
+
+        rot = HMM_Rotate(-90.0f, g->playerForward);
+
+        vec4 right = rot * vec4FromVec3(g->playerRight);
+        g->playerRight = vec3FromVec4(right);
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerUp = vec3FromVec4(up);
       } break;
     case ROT_RIGHT:
       {
-        pitchFactor = -1.0;
+        yawFactor = -1.0f;
+
+        rot = HMM_Rotate(90.0f, g->playerForward);
+
+        vec4 right = rot * vec4FromVec3(g->playerRight);
+        g->playerRight = vec3FromVec4(right);
+
+        vec4 up = rot * vec4FromVec3(g->playerUp);
+        g->playerUp = vec3FromVec4(up);
+      } break;
+    default:
+      {
+        logln("ERROR: unknown rotation direction");
+
+        return;
       } break;
   }
 
-  if (g->rotState != ROT_IDLE) {
-    real32 pc = 1.0f - ((float) ((g->rotStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
+  logln("old:");
+  printFace(g->currentFace);
+  printRot(direction);
 
-    if (getTime() > g->rotStartTime + ROTATION_DURATION) {
+  g->playerRotation = g->playerRotation * rot;
+  g->currentFace = faceRotationMap[g->currentFace][direction];
+
+  g->rotating = true;
+  g->rotatingStart = g->cameraRotation;
+  g->rotatingStartTime = getTime();
+  g->rotatingPitchEnd = 90.0f * pitchFactor;
+  g->rotatingYawEnd = 90.0f * yawFactor;
+  g->rotatingRollEnd = 0.0f;
+
+  logln("new:");
+  printFace(g->currentFace);
+  printRot(direction);
+}
+
+void gameState_update(State *state) {
+  GameState* g = (GameState*) state->memory;
+
+  gameState_setFaceDirections(g);
+
+  if (g->rotating) {
+    real32 pc = 1.0f - ((float) ((g->rotatingStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
+
+    if (getTime() > g->rotatingStartTime + ROTATION_DURATION) {
       pc = 1.0f;
-
-      if (g->rotState == ROT_FORWARD) {
-        logln("forward");
-
-        mat4 rot = HMM_Rotate(-90.0f, g->playerRight);
-
-        g->playerRotation = g->playerRotation * rot;
-
-        vec4 fwd = rot * vec4FromVec3(g->playerForward);
-        vec4 up = rot * vec4FromVec3(g->playerUp);
-        g->playerForward = vec3FromVec4(fwd);
-        g->playerUp = vec3FromVec4(up);
-      } else if (g->rotState == ROT_LEFT) {
-        logln("left");
-        mat4 rot = HMM_Rotate(90.0f, g->playerForward);
-
-        g->playerRotation = g->playerRotation * rot;
-
-        vec4 up = rot * vec4FromVec3(g->playerUp);
-        vec4 rgt = rot * vec4FromVec3(g->playerRight);
-        g->playerUp = vec3FromVec4(up);
-        g->playerRight = vec3FromVec4(rgt);
-      } else if (g->rotState == ROT_BACKWARD) {
-        logln("backward");
-        mat4 rot = HMM_Rotate(90.0f, g->playerRight);
-
-        g->playerRotation = g->playerRotation * rot;
-
-        vec4 fwd = rot * vec4FromVec3(g->playerForward);
-        vec4 up = rot * vec4FromVec3(g->playerUp);
-        g->playerForward = vec3FromVec4(fwd);
-        g->playerUp = vec3FromVec4(up);     
-      } else if (g->rotState == ROT_RIGHT) {
-        logln("right");
-        mat4 rot = HMM_Rotate(-90.0f, g->playerForward);
-
-        g->playerRotation = g->playerRotation * rot;
-
-        vec4 up = rot * vec4FromVec3(g->playerUp);
-        vec4 rgt = rot * vec4FromVec3(g->playerRight);
-        g->playerUp = vec3FromVec4(up);
-        g->playerRight = vec3FromVec4(rgt);     
-      }
-
-      logfln("up: %f %f %f", g->playerUp.x, g->playerUp.y, g->playerUp.z);
-      logfln("right: %f %f %f", g->playerRight.x, g->playerRight.y, g->playerRight.z);
-      logfln("forward: %f %f %f", g->playerForward.x, g->playerForward.y, g->playerForward.z);
-
-      uint32 nextFace = faceRotationMap[g->currentFace][g->rotState];
-
-      g->currentFace = nextFace;
-
-      g->rotState = ROT_IDLE;
+      g->rotating = false;
     }
 
-    real32 amount = 90.0f * (pc * pc);
+    pc = pc * pc;
 
-    quat deltaRot = quatFromPitchYawRoll(rollFactor * amount, pitchFactor * amount, yawFactor * amount);
+    g->cameraRotation = quatFromPitchYawRoll(
+        g->rotatingPitchEnd * pc,
+        g->rotatingYawEnd * pc,
+        g->rotatingRollEnd * pc) * g->rotatingStart;
 
-    g->cameraRotation = deltaRot * g->rotStart;
     g->cameraRotation = quatNormalize(g->cameraRotation);
+  } else {
+    real32 speed = 2.0f;
+    real32 dt = getDt();
+
+    if (keyDown(KEY_a)) {
+      g->playerPos -= g->playerRight * dt * speed;
+    }
+
+    if (keyDown(KEY_d)) {
+      g->playerPos += g->playerRight * dt * speed;
+    }
+
+    if (keyDown(KEY_w)) {
+      g->playerPos += g->playerForward * dt * speed;
+    }
+
+    if (keyDown(KEY_s)) {
+      g->playerPos -= g->playerForward * dt * speed;
+    }
+
+    if (keyJustDown(KEY_shift)) {
+      vec3 realRight = g->faceRight;
+      vec3 realForward = g->faceForward * -1;
+
+      real32 rightLen = vec3Sum(g->playerPos * realRight);
+      real32 forwardLen = vec3Sum(g->playerPos * realForward);
+
+      logfln("playerRightlen: %f, forwardlen: %f", rightLen, forwardLen);
+
+      if (fabs(rightLen) > 1.49f) {
+        gameState_rotate(g, (rightLen > 0) ? ROT_RIGHT : ROT_LEFT);
+      } else if (fabs(forwardLen) > 1.49f) {
+        gameState_rotate(g, (forwardLen < 0) ? ROT_FORWARD : ROT_BACKWARD);
+      }
+    }
+
+    g->playerPos.x = clamp(g->playerPos.x, -1.5f, 1.5f);
+    g->playerPos.y = clamp(g->playerPos.y, -1.5f, 1.5f);
+    g->playerPos.z = clamp(g->playerPos.z, -1.5f, 1.5f);
   }
 
-  /* drawing */
   glClearColor(18.0f/255, 26.0f/255, 47.0f/255, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  vec3 cameraPosition = vec3(0.0f, 0.0f, CAMERA_POSITION_OFFSET_Z);
+  mat4 projection = mat4Perspective(70.0f, (real32) getWindowWidth() / (real32) getWindowHeight(), 0.1f, 1000.0f);
 
-  mat4 view = mat4d(1);
-  view = mat4Translate(view, cameraPosition);
+  quat offset = quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0);
+
+  mat4 view = mat4d(1.0f);
+  view = mat4Translate(view, CAMERA_POSITION);
+  view = view * quatToMat4(offset);
   view = view * quatToMat4(g->cameraRotation);
-
-  g->cameraRight = vec3(view[0][0], view[1][0], view[2][0]);
-  g->cameraUp = vec3(view[0][1], view[1][1], view[2][1]);
-
-  view = mat4d(1);
-  view = mat4Translate(view, cameraPosition);
-
-  quat cameraOffset = quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0);
-  view = view * quatToMat4(cameraOffset * g->cameraRotation);
-
-  mat4 projection = mat4Perspective(70.0f, (real32) getWindowWidth() / (real32) getWindowHeight(), 0.1f, 10000.0f);
-
-  {
-    vec3 asteroidPosition = vec3(0, 0, 0);
-    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
-
-    mat4 model = mat4d(1);
-    model = mat4Translate(model, asteroidPosition + asteroidOffset);
-
-    glUseProgram(shader(SHADER_default).id);
-
-    shaderSetMatrix(&shader(SHADER_default), "model", model);
-    shaderSetMatrix(&shader(SHADER_default), "view", view);
-    shaderSetMatrix(&shader(SHADER_default), "projection", projection);
-
-    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_rock).id);
-    glBindVertexArray(g->asteroidVAO);
-    glDrawArrays(GL_TRIANGLES, 0, g->asteroidVertCount);
-  }
-
-  {
-    Shader s = shader(SHADER_default);
-    Texture t = texture(TEXTURE_player);
-
-    glUseProgram(s.id);
-
-    vec3 pivot = vec3(0, -0.5f, 0.0);
-
-    mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, pivot);
-    model = mat4Translate(model, g->playerPosition + vec3(0.0f, 0.5f, 0.0));
-    model = mat4Rotate(model * g->playerRotation, 90.0f, vec3(1, 0, 0));
-    model = mat4Scale(model, vec3(g->playerSize.x, g->playerSize.y, 1));
-    model = mat4Translate(model, pivot * -1);
-
-    shaderSetMatrix(&s, "model", model);
-    shaderSetMatrix(&s, "view", view);
-    shaderSetMatrix(&s, "projection", projection);
-
-    glBindTexture(GL_TEXTURE_2D, t.id);
-    glBindVertexArray(g->quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  }
 
   {
     Shader s = shader(SHADER_default);
@@ -799,25 +459,43 @@ void gameState_update(State* state) {
 
     glUseProgram(s.id);
 
+    real32 scale = 0.25f;
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(model, g->playerPos);
+    model = mat4Translate(model, -1*vec3_one/2*scale);
+    model = model * g->playerRotation;
+    model = mat4Scale(model, vec3_one*scale);
+
+    shaderSetMatrix(&s, "model", model);
     shaderSetMatrix(&s, "view", view);
     shaderSetMatrix(&s, "projection", projection);
 
-    for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
-      if (!g->pastPlayers[i].exists) {
-        continue;
-      }
+    glBindTexture(GL_TEXTURE_2D, t.id);
+    glBindVertexArray(g->cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+  }
 
-      PastPlayer pp = g->pastPlayers[i];
-      mat4 model = mat4d(1.0f);
+  {
+    Shader s = shader(SHADER_default);
+    Texture t = texture(TEXTURE_rock);
 
-      model = mat4Translate(model, pp.pos);
-      model = mat4Scale(model, vec3(0.5, 0.5, 0.5));
+    vec3 asteroidPosition = vec3(0, 0, 0);
+    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
 
-      shaderSetMatrix(&s, "model", model);
+    mat4 model = mat4d(1);
+    model = mat4Translate(model, asteroidPosition + asteroidOffset);
 
-      glBindTexture(GL_TEXTURE_2D, t.id);
-      glBindVertexArray(g->cubeVAO);
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
+    glUseProgram(s.id);
+
+    shaderSetMatrix(&shader(SHADER_default), "model", model);
+    shaderSetMatrix(&shader(SHADER_default), "view", view);
+    shaderSetMatrix(&shader(SHADER_default), "projection", projection);
+
+    glBindTexture(GL_TEXTURE_2D, t.id);
+    glBindVertexArray(g->worldVAO);
+    glDrawArrays(GL_TRIANGLES, 0, g->worldVertCount);
   }
 }
+
+// TODO(harrison): Abstract OpenGL out of the state update loop. Create a `draw.cpp` file with immediate-gui-ish API
+// TODO(harrison): Create "custom allocator" which can be used by the places in our game to reserve memory. Let's call it a MemoryZone. Should have two zones to start with: 1. Game memory, 2. Frame memory. Game memory should give us a place to read assets into, store action chunks, and do other things. Frame memory should be a place to store data used in calculations. It will be freed at the end of each frame. Should essentially be a linked list of MemoryBlock's, which can be co-opted at any-time and then potentially tagged with certain information (ie. CACHE which would mean that it will be destroyed when the game reaches a certain memory limit, and then re-generated at runtime when need be.

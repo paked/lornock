@@ -7,7 +7,6 @@ enum {
 
 // Include states here
 #include <game_state.cpp>
-#include <test_state.cpp>
 
 void stateInit(State *state, StateType type) {
   switch (type) {

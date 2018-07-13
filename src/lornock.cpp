@@ -1,8 +1,12 @@
+//
 // External libraries
+//
 #include <math.h>
 #include <ctype.h>
 
+//
 // Vendored libraries
+//
 #include <glad/glad.h>
 
 #define HANDMADE_MATH_IMPLEMENTATION
@@ -12,17 +16,27 @@
 #define STBI_ONLY_PNG
 #include <stb_image.h>
 
+//
 // Platform common
+//
 #include <platform_common.hpp>
 
 Platform* platform = 0;
 LornockMemory* lornockMemory = 0;
 
+//
 // Lornock code
+//
+
+// Utilities
 #include <hmm_wrapper.cpp>
+#include <friendly/math.cpp>
+#include <friendly/string.cpp>
+#include <globals.cpp>
+
+// Real code
 #include <assets.cpp>
 #include <lornock_data.cpp>
-#include <actions.cpp>
 #include <states.cpp>
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set
@@ -49,7 +63,7 @@ extern "C" void lornockUpdate(LornockMemory* m) {
   if (!m->initialized) {
     stbi_set_flip_vertically_on_load(true);
 
-    stateInit(&lornockData->state, STATE_test);
+    stateInit(&lornockData->state, STATE_game);
 
     // Refresh assets
     updateAssets();

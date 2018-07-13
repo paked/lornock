@@ -16,12 +16,6 @@
 #define megabytes(n) (kilobytes(n)*1024)
 #define gigabytes(n) (megabytes(n)*1024)
 
-#define PI  3.1415926535897
-#define PIf 3.1415926f
-
-#define rad2Deg(a) ((a) * (180.0f/PIf))
-#define deg2Rad(a) ((a) * (PIf/180.0f))
-
 typedef int8_t    int8;
 typedef int16_t   int16;
 typedef int32_t   int32;
@@ -111,70 +105,3 @@ struct Platform {
   uint32 time;
   real32 deltaTime;
 };
-
-#define getTime() (platform->time)
-#define getDt() (platform->deltaTime)
-#define getWindowWidth() (platform->windowWidth)
-#define getWindowHeight() (platform->windowHeight)
-
-#define loadFromFile(p, d, l) platform->loadFromFile(p, d, l)
-#define writeToFile(p, d, l) platform->writeToFile(p, d, l)
-
-#define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])
-#define keyJustUp(k) (!platform->keyStateNow[k] && platform->keyStateLast[k])
-#define keyDown(k) (platform->keyStateNow[k])
-#define keyUp(k) (!platform->keyStateNow[k])
-
-#define cubeMesh { \
-     0.0f,  0.0f,  0.0f,  0.0f, 0.0f, /* back */ \
-     1.0f,  0.0f,  0.0f,  1.0f, 0.0f, \
-     1.0f,  1.0f,  0.0f,  1.0f, 1.0f, \
-     1.0f,  1.0f,  0.0f,  1.0f, 1.0f, \
-     0.0f,  1.0f,  0.0f,  0.0f, 1.0f, \
-     0.0f,  0.0f,  0.0f,  0.0f, 0.0f, \
-\
-     0.0f,  0.0f,  1.0f,  0.0f, 0.0f, /* front */ \
-     1.0f,  0.0f,  1.0f,  1.0f, 0.0f, \
-     1.0f,  1.0f,  1.0f,  1.0f, 1.0f, \
-     1.0f,  1.0f,  1.0f,  1.0f, 1.0f, \
-     0.0f,  1.0f,  1.0f,  0.0f, 1.0f, \
-     0.0f,  0.0f,  1.0f,  0.0f, 0.0f, \
-\
-     0.0f,  1.0f,  1.0f,  1.0f, 0.0f, /* left */ \
-     0.0f,  1.0f,  0.0f,  1.0f, 1.0f, \
-     0.0f,  0.0f,  0.0f,  0.0f, 1.0f, \
-     0.0f,  0.0f,  0.0f,  0.0f, 1.0f, \
-     0.0f,  0.0f,  1.0f,  0.0f, 0.0f, \
-     0.0f,  1.0f,  1.0f,  1.0f, 0.0f, \
-\
-     1.0f,  1.0f,  1.0f,  1.0f, 0.0f, /* right */ \
-     1.0f,  1.0f,  0.0f,  1.0f, 1.0f, \
-     1.0f,  0.0f,  0.0f,  0.0f, 1.0f, \
-     1.0f,  0.0f,  0.0f,  0.0f, 1.0f, \
-     1.0f,  0.0f,  1.0f,  0.0f, 0.0f, \
-     1.0f,  1.0f,  1.0f,  1.0f, 0.0f, \
-\
-     0.0f,  0.0f,  0.0f,  0.0f, 1.0f, /* bottom */ \
-     1.0f,  0.0f,  0.0f,  1.0f, 1.0f, \
-     1.0f,  0.0f,  1.0f,  1.0f, 0.0f, \
-     1.0f,  0.0f,  1.0f,  1.0f, 0.0f, \
-     0.0f,  0.0f,  1.0f,  0.0f, 0.0f, \
-     0.0f,  0.0f,  0.0f,  0.0f, 1.0f, \
-\
-     0.0f,  1.0f,  0.0f,  0.0f, 1.0f, /* top */ \
-     1.0f,  1.0f,  0.0f,  1.0f, 1.0f, \
-     1.0f,  1.0f,  1.0f,  1.0f, 0.0f, \
-     1.0f,  1.0f,  1.0f,  1.0f, 0.0f, \
-     0.0f,  1.0f,  1.0f,  0.0f, 0.0f, \
-     0.0f,  1.0f,  0.0f,  0.0f, 1.0f \
-}
-
-real32 clamp(real32 v, real32 min, real32 max) {
-  if (v < min) {
-    return min;
-  } else if (v > max) {
-    return max;
-  }
-
-  return v;
-}
