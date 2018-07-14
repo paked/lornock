@@ -176,8 +176,9 @@ struct GameState {
   quat rotatingStart;
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
-  GLuint worldVAO;
-  uint32 worldVertCount;
+  Mesh worldMesh;
+
+  Mesh cubeMesh;
 
   GLuint cubeVAO;
 };
@@ -253,48 +254,17 @@ void gameState_init(State* state) {
     }
   }
 
-  GLuint worldVAO, worldVBO;
-  glGenVertexArrays(1, &worldVAO);
+  g->worldMesh = mesh_init(verts, count);
 
-  glGenBuffers(1, &worldVBO);
-
-  glBindVertexArray(worldVAO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, worldVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * count, verts, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  g->worldVAO = worldVAO;
-  g->worldVertCount = count;
-
-  // Cube
   real32 cubeData[] = CUBE_MESH_DATA;
-
-  GLuint cubeVAO, cubeVBO;
-
-  glGenVertexArrays(1, &cubeVAO);
-  glBindVertexArray(cubeVAO);
-
-  glGenBuffers(1, &cubeVBO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cubeData), cubeData, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  g->cubeVAO = cubeVAO;
+  g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
   assetsRequestShader(SHADER_default);
   assetsRequestTexture(TEXTURE_test);
   assetsRequestTexture(TEXTURE_player);
   assetsRequestTexture(TEXTURE_rock);
+
+  draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -441,61 +411,45 @@ void gameState_update(State *state) {
     g->playerPos.z = clamp(g->playerPos.z, -1.5f, 1.5f);
   }
 
-  glClearColor(18.0f/255, 26.0f/255, 47.0f/255, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  draw_begin(); // Clear buffers, set viewport size, etc.
 
-  mat4 projection = mat4Perspective(70.0f, (real32) getWindowWidth() / (real32) getWindowHeight(), 0.1f, 1000.0f);
-
-  quat offset = quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0);
-
-  mat4 view = mat4d(1.0f);
-  view = mat4Translate(view, CAMERA_POSITION);
-  view = view * quatToMat4(offset);
-  view = view * quatToMat4(g->cameraRotation);
-
+  draw_3d_begin(70.0f);
+  
+  // TODO(harrison): refactor into OrbitalCamera struct.
   {
-    Shader s = shader(SHADER_default);
-    Texture t = texture(TEXTURE_test);
+    mat4 view = mat4d(1.0f);
+    view = mat4Translate(view, CAMERA_POSITION);
+    view = view * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
+    view = view * quatToMat4(g->cameraRotation);
 
-    glUseProgram(s.id);
-
-    real32 scale = 0.25f;
-    mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, g->playerPos);
-    model = mat4Translate(model, -1*vec3_one/2*scale);
-    model = model * g->playerRotation;
-    model = mat4Scale(model, vec3_one*scale);
-
-    shaderSetMatrix(&s, "model", model);
-    shaderSetMatrix(&s, "view", view);
-    shaderSetMatrix(&s, "projection", projection);
-
-    glBindTexture(GL_TEXTURE_2D, t.id);
-    glBindVertexArray(g->cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    draw.view = view;
   }
 
   {
-    Shader s = shader(SHADER_default);
-    Texture t = texture(TEXTURE_rock);
+    draw_setShader(shader(SHADER_default));
 
     vec3 asteroidPosition = vec3(0, 0, 0);
     vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
 
     mat4 model = mat4d(1);
-    model = mat4Translate(model, asteroidPosition + asteroidOffset);
+    model = mat4Translate(model, asteroidOffset);
+    model = mat4Translate(model, asteroidPosition);
 
-    glUseProgram(s.id);
+    draw_3d_mesh(g->worldMesh, model, texture(TEXTURE_rock));
+  }
 
-    shaderSetMatrix(&shader(SHADER_default), "model", model);
-    shaderSetMatrix(&shader(SHADER_default), "view", view);
-    shaderSetMatrix(&shader(SHADER_default), "projection", projection);
+  {
+    draw_setShader(shader(SHADER_default));
 
-    glBindTexture(GL_TEXTURE_2D, t.id);
-    glBindVertexArray(g->worldVAO);
-    glDrawArrays(GL_TRIANGLES, 0, g->worldVertCount);
+    real32 scale = 0.25f;
+
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(model, g->playerPos);
+    model = mat4Translate(model, -1*vec3_one/2*scale);
+    model = mat4Scale(model, vec3_one*scale);
+
+    draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
   }
 }
 
-// TODO(harrison): Abstract OpenGL out of the state update loop. Create a `draw.cpp` file with immediate-gui-ish API
 // TODO(harrison): Create "custom allocator" which can be used by the places in our game to reserve memory. Let's call it a MemoryZone. Should have two zones to start with: 1. Game memory, 2. Frame memory. Game memory should give us a place to read assets into, store action chunks, and do other things. Frame memory should be a place to store data used in calculations. It will be freed at the end of each frame. Should essentially be a linked list of MemoryBlock's, which can be co-opted at any-time and then potentially tagged with certain information (ie. CACHE which would mean that it will be destroyed when the game reaches a certain memory limit, and then re-generated at runtime when need be.

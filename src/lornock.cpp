@@ -36,6 +36,7 @@ LornockMemory* lornockMemory = 0;
 
 // Real code
 #include <assets.cpp>
+#include <draw.cpp>
 #include <lornock_data.cpp>
 #include <states.cpp>
 
@@ -49,6 +50,8 @@ extern "C" int lornockInit(Platform* p) {
 
     return 1;
   }
+
+  draw_init();
 
   return 0;
 }
@@ -75,9 +78,6 @@ extern "C" void lornockUpdate(LornockMemory* m) {
 
     m->initialized = true;
   }
-
-  // TODO(harrison): how much of a performance hit does this cost?
-  glViewport(0, 0, getWindowWidth(), getWindowHeight());
 
   updateAssets();
 

@@ -261,3 +261,38 @@ struct Assets {
   int32 textureRequests[MAX_TEXTURE];
   Texture textures[MAX_TEXTURE];
 };
+
+struct Mesh {
+  GLuint vao;
+  GLuint vbo;
+
+  uint64 vertCount;
+  uint64 faceCount;
+};
+
+Mesh mesh_init(real32* verts, uint64 count) {
+  Mesh m;
+
+  GLuint vao, vbo;
+  glGenVertexArrays(1, &vao);
+
+  glGenBuffers(1, &vbo);
+
+  glBindVertexArray(vao);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * count, verts, GL_STATIC_DRAW);
+
+  // TODO(harrison): add options for "non-standard" vertex attribute configurations
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+
+  m.vao = vao;
+  m.vbo = vbo;
+  m.vertCount = count;
+  m.faceCount = count/5;
+
+  return m;
+}
