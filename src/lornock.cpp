@@ -35,6 +35,7 @@ LornockMemory* lornockMemory = 0;
 #include <globals.cpp>
 
 // Real code
+#include <memory.cpp>
 #include <assets.cpp>
 #include <draw.cpp>
 #include <lornock_data.cpp>
@@ -57,13 +58,18 @@ extern "C" int lornockInit(Platform* p) {
 }
 
 extern "C" void lornockUpdate(LornockMemory* m) {
-  dbg_assert(sizeof(m->permanentStorage) < m->permanentStorageSize);
-
   lornockMemory = m;
 
   lornockData = (LornockData*) m->permanentStorage;
 
+  dbg_assert(sizeof(*lornockData) < m->permanentStorageSize);
+
   if (!m->initialized) {
+    memoryArena_init(
+        &lornockData->actionsArena,
+        m->permanentStorageSize - sizeof(*lornockData),
+        (uint8*) m->permanentStorage + sizeof(*lornockData));
+
     stbi_set_flip_vertically_on_load(true);
 
     stateInit(&lornockData->state, STATE_game);

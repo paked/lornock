@@ -1,3 +1,5 @@
+#include <entities/actions.cpp>
+
 // Voxel direction/faces
 enum {
   BACK,
@@ -193,6 +195,14 @@ void gameState_setFaceDirections(GameState* g) {
 }
 
 void gameState_init(State* state) {
+  {
+    Action *a1 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
+    Action *a2 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
+
+    *a1 = action_makeSpawn(vec3_one);
+    *a2 = action_makeJump(20);
+  }
+
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
@@ -350,6 +360,14 @@ void gameState_rotate(GameState* g, uint32 direction) {
 }
 
 void gameState_update(State *state) {
+  {
+    for (MemoryBlock* i = lornockData->actionsArena.first; i != 0; i = i->next) {
+      Action* a = (Action*) i->start;
+      logln("got action!");
+      action_print(*a);
+    }
+  }
+
   GameState* g = (GameState*) state->memory;
 
   gameState_setFaceDirections(g);

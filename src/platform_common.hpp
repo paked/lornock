@@ -28,6 +28,8 @@ typedef float     real32;
 typedef double    real64;
 typedef int32     bool32;
 
+typedef size_t MemoryIndex;
+
 // TODO(harrison): Add in rest of keys!
 enum {
   KEY_unknown,
@@ -78,7 +80,7 @@ struct LornockMemory {
 };
 
 // We cast to uint64 to prevent issues where 32 bit constants wrap around.
-#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 2)
+#define LORNOCK_PERMANENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
 #define LORNOCK_TRANSIENT_MEMORY_STORAGE_SIZE megabytes((uint64) 8)
 
 typedef void* (* OpenGLLoadProcFunc)(const char *name);

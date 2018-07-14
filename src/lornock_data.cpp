@@ -8,6 +8,8 @@ struct LornockData {
   Assets assets;
 
   State state;
+
+  MemoryArena actionsArena;
 }* lornockData = 0;
 
 #define assetsRequestShader(i) lornockData->assets.shaderRequests[i]++

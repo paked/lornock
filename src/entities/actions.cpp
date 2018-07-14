@@ -504,7 +504,6 @@ bool timeBox_findNextActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint3
   return false;
 }
 
-
 bool timeBox_findNextActionInSequence(TimeBox *tb, Action* a, int s) {
   uint32 lineLen = 0;
   char* line = (char*) lornockMemory->transientStorage;
