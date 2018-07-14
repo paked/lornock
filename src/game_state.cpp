@@ -469,5 +469,3 @@ void gameState_update(State *state) {
     draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
   }
 }
-
-// TODO(harrison): Create "custom allocator" which can be used by the places in our game to reserve memory. Let's call it a MemoryZone. Should have two zones to start with: 1. Game memory, 2. Frame memory. Game memory should give us a place to read assets into, store action chunks, and do other things. Frame memory should be a place to store data used in calculations. It will be freed at the end of each frame. Should essentially be a linked list of MemoryBlock's, which can be co-opted at any-time and then potentially tagged with certain information (ie. CACHE which would mean that it will be destroyed when the game reaches a certain memory limit, and then re-generated at runtime when need be.

@@ -1,3 +1,6 @@
+// TODO(harrison): Add ability to clear an arena (and zero it)
+// TODO(harrison): Add temporary memory faculties
+
 struct MemoryBlock {
   uint8* base;
   uint8* start;

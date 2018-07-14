@@ -10,15 +10,13 @@ Todo:
 - Have things on the world
   - Have things on the world which change over time
 - Fix number keys not triggering input events
-- Refactor TimeBox into GOOD CODE.
-  - Come up with a consistent API for accessing the timebox
-    - Remove the concept of "upto" state from the TimeBox, create a separate `TimeBoxIndex` struct which contains that info.
-    - Functions like `timeBox_findNextAction(TimeBox* tb, TimeBoxIndex* tbi, uint64 sequence)`
-    - Create versatile search functions
-  - Parse each line into an action when it is first read, keep in chunks of certain sizes and kept in some storage
-    - Create a divide between `FrameStorage` (memory which gets killed after the end of a frame), `TransientStorage` (memory which can be killed at any point and regenerated if need be, usually lasts many frames though)
 
 In progress:
+- [ ] Refactor TimeBox back into GameState
+  - [x] Create a MemoryArena for storing this memory, and an ActionPool struct to put in MemoryBlocks
+  - [ ] Refactor TimeBox to use MemoryArena for it's actions instead of re-parsing at runtime
+  - [ ] Ensure the TimeBox is GOOD CODE.
+    - Make TimeBox stateless, parse in `TimeBoxIndex` to the functions to control where it searches from
 - [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
