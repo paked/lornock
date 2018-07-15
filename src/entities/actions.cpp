@@ -207,11 +207,199 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
   return true;
 }
 
+#define ACTION_CHUNK_MAX 128
+
+struct ActionChunk {
+  Action actions[ACTION_CHUNK_MAX];
+  uint64 count;
+};
+
 #define TIME_BOX_WRITE_BUFFER_SIZE (128)
 #define TIME_BOX_PAGE_SIZE (128)
 #define TIME_BOX_TICKS_PER_SECOND (10) // per second
 #define TIME_BOX_TICK_MS_INTERVAL (1000/TIME_BOX_TICKS_PER_SECOND)
 
+struct TimeIndex {
+  int64 time;
+  uint64 sequence;
+  uint64 jumpID;
+
+  int64 timeDoneTo;
+  uint64 point;
+};
+
+struct TimeBox {
+  uint64 nextTickTime;
+
+  ActionChunk toWrite;
+};
+
+void timeBox_init(TimeBox* tb) {
+  tb->toWrite.count = 0;
+}
+
+void timeBox_load(TimeBox* tb, TimeIndex* index, MemoryArena* ma, const char* name) {
+  char infoFname[128];
+  snprintf(infoFname, 128, "data/saves/%s.info", name);
+
+  char saveFilename[128];
+  snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
+
+  void* rawData;
+  uint32 rawLen = 0;
+
+  loadFromFile(saveFilename, &rawData, &rawLen);
+
+  // TODO(harrison): custom assert
+  assert(rawLen > 0);
+
+  uint32 rawUpTo = 0;
+  char *raw = (char*) rawData;
+
+  ActionChunk* chunk = memoryArena_pushStruct(ma, ActionChunk);
+  chunk->count = 0;
+
+  // TODO(harrison): ensure that new memory gets zeroed out.
+  // TODO(harrison): test this solution handling multi-chunk things
+
+  char* line = (char*) lornockMemory->transientStorage;
+  uint32 lineLen = 0;
+  while (rawUpTo < rawLen) {
+    getLine(line, &lineLen, &rawUpTo, raw, rawLen);
+    rawUpTo += 1;
+
+    Action a;
+
+    assert(action_parse(&a, line, lineLen));
+
+    chunk->actions[chunk->count] = a;
+    chunk->count += 1;
+
+    if (chunk->count >= ACTION_CHUNK_MAX) {
+      chunk = memoryArena_pushStruct(ma, ActionChunk);
+      chunk->count = 0;
+    }
+  }
+
+  uint32 infoLen;
+  void* infoData;
+
+  loadFromFile(infoFname, &infoData, &infoLen);
+
+  assert(infoLen > 0);
+
+  int64 time;
+  uint64 sequence;
+  uint64 jumpID;
+
+  sscanf((char*) infoData, "%ld %lu %lu", &time, &sequence, &jumpID);
+
+  index->time = index->timeDoneTo = time;
+  index->sequence = sequence;
+  index->jumpID = jumpID;
+}
+
+void timeBox_add(TimeBox* tb, TimeIndex* index, Action a) {
+  if (tb->toWrite.count >= ACTION_CHUNK_MAX) {
+    logln("flushing buffer!");
+
+    // timeBox_save(tb);
+  }
+
+  index->sequence += 1;
+  a.common.time = index->time;
+  a.common.sequence = index->sequence;
+  a.common.jumpID = index->jumpID;
+
+  tb->toWrite.actions[tb->toWrite.count] = a;
+
+  tb->toWrite.count += 1;
+}
+
+bool timeBox_nextActionInSequence(TimeBox* tb, MemoryArena* ma, uint64 sequence, Action *a) {
+  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+    ActionChunk* ac = (ActionChunk*) block->start;
+
+    for (int i = 0; i < ac->count; i++) {
+      Action t = ac->actions[i];
+
+      if (t.common.sequence == sequence + 1) {
+        *a = t;
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool timeBox_actionInSequence(TimeBox* tb, MemoryArena* ma, uint64 sequence, Action *a) {
+  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+    ActionChunk* ac = (ActionChunk*) block->start;
+
+    for (int i = 0; i < ac->count; i++) {
+      Action t = ac->actions[i];
+
+      if (t.common.sequence == sequence) {
+        *a = t;
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+
+bool timeBox_nextAction(TimeBox* tb, MemoryArena* ma, TimeIndex* index, Action *a) {
+  uint64 p = 0;
+  int64 lastTime = -1;
+
+  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+    ActionChunk* ac = (ActionChunk*) block->start;
+
+    for (int i = 0; i < ac->count; i++) {
+      Action t = ac->actions[i];
+
+      if (lastTime == t.common.time) {
+        p += 1;
+      } else {
+        p = 0;
+      }
+
+      lastTime = t.common.time;
+
+      if (t.common.time < index->timeDoneTo) {
+        continue;
+      }
+
+      if (t.common.time == index->timeDoneTo && p <= index->point) {
+        continue;
+      }
+
+      if (t.common.time > index->time) {
+        return false;
+      }
+
+      if (index->timeDoneTo != t.common.time) {
+        index->timeDoneTo = t.common.time;
+        index->point = 0;
+      } else {
+        index->point = p;
+      }
+
+      *a = t;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/*
 struct TimeBox {
   char* saveName;
 
@@ -224,6 +412,8 @@ struct TimeBox {
 
   int64 writeCount;
   Action writeBuffer[TIME_BOX_WRITE_BUFFER_SIZE];
+
+  // ActionChunk toWrite;
 
   int64 time;
   uint64 sequence;
@@ -564,4 +754,4 @@ bool timeBox_findLastActionInSequenceOfType(TimeBox *tb, Action* a, int s, uint3
   }
 
   return false;
-}
+}*/

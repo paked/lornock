@@ -181,6 +181,8 @@ struct GameState {
 
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
+  TimeIndex timeIndex;
+  uint64 timeBoxNextTickTime;
   TimeBox timeBox;
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
@@ -221,14 +223,6 @@ void gameState_disableAllPastPlayers(GameState* g) {
 }
 
 void gameState_init(State* state) {
-  /*{
-    Action *a1 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
-    Action *a2 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
-
-   *a1 = action_makeSpawn(vec3_one);
-   *a2 = action_makeJump(20);
-   }*/
-
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
@@ -252,7 +246,11 @@ void gameState_init(State* state) {
   g->rotatingStart = quatFromPitchYawRoll(0.0f, 0.0f, 0.0f);
 
   gameState_disableAllPastPlayers(g);
-  timeBox_init(&g->timeBox, "simple");
+
+  timeBox_load(&g->timeBox, &g->timeIndex, &lornockData->actionsArena, "simple");
+  g->timeIndex.time = 0;
+  g->timeIndex.timeDoneTo = -1;
+  g->timeBoxNextTickTime = 0;
 
   for (int y = 0; y < WORLD_HEIGHT; y++) {
     for (int z = 0; z < WORLD_DEPTH; z++) {
@@ -306,16 +304,32 @@ void gameState_init(State* state) {
 
   draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
 
-  Action a;
+  {
+    Action a = { 0 };
+    bool found = false;
+    uint64 current = g->timeIndex.sequence;
 
-  if (!timeBox_findLastActionInSequenceOfType(&g->timeBox, &a, g->timeBox.sequence, MOVE)) {
-    logln("ERROR: could not find last action of type.");
+    while (timeBox_actionInSequence(&g->timeBox, &lornockData->actionsArena, current, &a)) {
+      if (a.common.type == MOVE || a.common.type == SPAWN) {
+        found = true;
 
-    // FIXME(harrison): Add in some sort of safeguard to stop this from happening
-  } else {
-    g->playerPos= a.move.pos;
+        break;
+      }
 
-    logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
+      current -= 1;
+    }
+
+    if (found) {
+      if (a.common.type == MOVE) {
+        g->playerPos = a.move.pos;
+      } else if (a.common.type == SPAWN) {
+        g->playerPos = a.spawn.pos;
+      }
+
+      logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
+    } else {
+      logln("ERROR: COULD NOT FIND THE LAST ACTION, AND AM SUBSEQUENTLY UNABLET O SET THE POSITION OF THE PLAYER PROPERLY.");
+    }
   }
 }
 
@@ -402,28 +416,20 @@ void gameState_rotate(GameState* g, uint32 direction) {
 }
 
 void gameState_update(State *state) {
-  /*
-     {
-     for (MemoryBlock* i = lornockData->actionsArena.first; i != 0; i = i->next) {
-     Action* a = (Action*) i->start;
-     logln("got action!");
-     action_print(*a);
-     }
-     }*/
-
   GameState* g = (GameState*) state->memory;
   TimeBox* tb = &g->timeBox;
 
-  if (getTime() > tb->nextTickTime) {
-    tb->nextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
+  if (getTime() > g->timeBoxNextTickTime) {
+    g->timeBoxNextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
 
     Action a;
-    while (timeBox_nextAction(tb, &a)) {
-      action_print(a);
+    while (timeBox_nextAction(tb, &lornockData->actionsArena, &g->timeIndex, &a)) {
+      logfln("got action: %ld", g->timeIndex.time);
 
       switch (a.type) {
         case SPAWN:
           {
+            logln("SPAWNING!");
             int id = gameState_getFirstPastPlayer(g);
             if (id < 0) {
               logln("WARNING: too many active past players!");
@@ -431,16 +437,15 @@ void gameState_update(State *state) {
               continue;
             }
 
-            pastPlayer_init(&g->pastPlayers[id], tb, a);
+            pastPlayer_init(&g->pastPlayers[id], tb, &g->timeIndex, &lornockData->actionsArena, a);
           } break;
         default:
           {
-            // We don't need to do anything
           } break;
       }
     }
 
-    tb->time += 1;
+    g->timeIndex.time += 1;
   }
 
   for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
@@ -448,11 +453,12 @@ void gameState_update(State *state) {
       continue;
     }
 
-    pastPlayer_update(&g->pastPlayers[i], tb);
+    pastPlayer_update(&g->pastPlayers[i], tb, &g->timeIndex, &lornockData->actionsArena);
   }
 
   gameState_setFaceDirections(g);
 
+  /*
   if (keyJustDown(KEY_tab)) {
     int64 dest = 2;
 
@@ -538,11 +544,12 @@ void gameState_update(State *state) {
         pastPlayer_init(&g->pastPlayers[id], tb, lastAction);
       }
     }
-  }
+  }*/
 
+/*
   if (keyJustDown(KEY_l)) {
     timeBox_save(tb);
-  }
+  }*/
 
   if (g->rotating) {
     real32 pc = 1.0f - ((float) ((g->rotatingStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
@@ -584,11 +591,12 @@ void gameState_update(State *state) {
 
     g->playerPos += move * dt * speed;
 
+    /*
     if (!vec3AlmostEqual(move, g->playerLastMove)) {
       timeBox_add(tb, action_makeMove(g->playerPos));
 
       g->playerLastMove = move;
-    }
+    }*/
 
     if (keyJustDown(KEY_shift)) {
       vec3 realRight = g->faceRight;

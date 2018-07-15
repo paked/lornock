@@ -2,36 +2,21 @@ struct PastPlayer {
   bool exists;
   bool moving;
 
-  vec3 start;
-  vec3 destination;
-
+  // TODO(harrison): refactor these into a TimeIndex?
   uint64 sequence;
-  uint64 nextSequence;
+  int64 lastTime;
 
   vec3 pos;
+  vec3 start;
+  vec3 destination;
 
   uint32 startTime;
   uint32 duration;
 };
 
-void pastPlayer_target(PastPlayer* pp, TimeBox *tb) {
-  Action next;
-  
-  if (!timeBox_findNextActionInSequenceOfType(tb, &next, pp->sequence, MOVE)) {
-    logln("SETTING PLAYER TO IMMOBILE");
-    pp->moving = false;
+void pastPlayer_setupNextMove(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma);
 
-    return;
-  }
-
-  pp->destination = next.move.pos;
-  pp->startTime = getTime();
-  pp->duration = (real32) TIME_BOX_TICK_MS_INTERVAL * (real32)(next.move.time - tb->time);
-
-  pp->nextSequence = next.move.sequence;
-}
-
-void pastPlayer_init(PastPlayer* pp, TimeBox* tb, Action first) {
+void pastPlayer_init(PastPlayer* pp, TimeBox *tb, TimeIndex* worldIndex, MemoryArena* ma, Action first) {
   pp->exists = true;
   pp->moving = true;
 
@@ -44,44 +29,82 @@ void pastPlayer_init(PastPlayer* pp, TimeBox* tb, Action first) {
   } else if(first.type == SPAWN) {
     pos = first.spawn.pos;
   } else {
+    assert(false);
+
     logln("ERROR: invalid action to init a pastPlayer with");
   }
 
-  pp->pos = pp->start = pos;
+  pp->pos = pos;
+  pp->lastTime = first.common.time;
 
-  pastPlayer_target(pp, tb);
+  pp->startTime = 0;
+  pp->duration = 0;
+
+  pastPlayer_setupNextMove(pp, tb, worldIndex, ma);
 }
 
-void pastPlayer_update(PastPlayer* pp, TimeBox* tb) {
-  Action a;
-  if (!timeBox_findNextActionInSequence(tb, &a, pp->sequence)) {
-    logfln("WARNING: PastPlayer should have been killed before this point: %ld", pp->sequence);
-
-    pp->exists = false;
+void pastPlayer_update(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+  if (!pp->exists) {
+    return;
   }
 
-  if (a.type == JUMP) {
-    pp->exists = false;
+  Action a;
+  while (timeBox_nextActionInSequence(tb, ma, pp->sequence, &a) && a.common.time < worldIndex->time) {
+    pp->sequence = a.common.sequence;
 
-    return;
+    switch (a.type) {
+      case MOVE:
+        {
+          pp->pos = a.move.pos;
+          pp->lastTime = a.common.time;
+
+          pastPlayer_setupNextMove(pp, tb, worldIndex, ma);
+        } break;
+      case JUMP:
+        {
+          pp->moving = pp->exists = false;
+        } break;
+    }
   }
 
   if (!pp->moving) {
     return;
   }
 
-  real32 pc = 1.0f - ((real32) ((pp->startTime + pp->duration) - getTime())) / (pp->duration); 
+  real32 time = pp->startTime + pp->duration;
+
+  if (time < getTime()) {
+    return;
+  }
+
+  real32 pc = 1.0f - ((real32) (time - getTime())) / (pp->duration); 
   pc = clamp(pc, 0, 1);
 
   pp->pos = vec3Lerp(pc, pp->start, pp->destination);
-
-  if (getTime() > pp->startTime + pp->duration) {
-    pp->pos = pp->destination;
-    pp->sequence = pp->nextSequence;
-    pp->start = pp->destination;
-
-    pastPlayer_target(pp, tb);
-  }
 }
 
+void pastPlayer_setupNextMove(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+  Action next = { 0 };
+  uint64 current = pp->sequence;
 
+  while (next.common.type != MOVE) {
+    if (!timeBox_nextActionInSequence(tb, ma, current, &next)) {
+      pp->moving = false;
+
+      break;
+    }
+
+    current += 1;
+  }
+
+  if (!pp->moving) {
+    return;
+  }
+
+  action_print(next);
+
+  pp->start = pp->pos;
+  pp->destination = next.move.pos;
+  pp->startTime = getTime();
+  pp->duration = (real32) TIME_BOX_TICK_MS_INTERVAL * (real32)((next.common.time + 1) - pp->lastTime);
+}
