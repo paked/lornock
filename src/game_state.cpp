@@ -1,4 +1,5 @@
 #include <entities/actions.cpp>
+#include <entities/past_player.cpp>
 
 // Voxel direction/faces
 enum {
@@ -166,6 +167,7 @@ struct GameState {
   vec3 playerRight;
   vec3 playerForward;
   vec3 playerPos;
+  vec3 playerLastMove;
   mat4 playerRotation;
 
   quat cameraRotation;
@@ -176,6 +178,10 @@ struct GameState {
   real32 rotatingYawEnd;
   real32 rotatingRollEnd;
   quat rotatingStart;
+
+  PastPlayer pastPlayers[MAX_PAST_PLAYERS];
+
+  TimeBox timeBox;
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   Mesh worldMesh;
@@ -194,14 +200,34 @@ void gameState_setFaceDirections(GameState* g) {
   g->faceForward = vec3(view[0][1], view[1][1], view[2][1]);
 }
 
+int gameState_getFirstPastPlayer(GameState* g) {
+  int id = -1;
+
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    if (!g->pastPlayers[i].exists) {
+      id = i;
+
+      break;
+    }
+  }
+
+  return id;
+}
+
+void gameState_disableAllPastPlayers(GameState* g) {
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    g->pastPlayers[i].exists = false;
+  }
+}
+
 void gameState_init(State* state) {
-  {
+  /*{
     Action *a1 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
     Action *a2 = memoryArena_pushStruct(&lornockData->actionsArena, Action);
 
-    *a1 = action_makeSpawn(vec3_one);
-    *a2 = action_makeJump(20);
-  }
+   *a1 = action_makeSpawn(vec3_one);
+   *a2 = action_makeJump(20);
+   }*/
 
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
@@ -213,6 +239,7 @@ void gameState_init(State* state) {
   g->playerRight = faceCardinalDirections[g->currentFace][DIRECTION_RIGHT];
   g->playerForward = faceCardinalDirections[g->currentFace][DIRECTION_FORWARD];
   g->playerPos = vec3(0.0f, 1.5f, 0.0f);
+  g->playerLastMove = vec3_zero;
   g->playerRotation = mat4d(1.0f);
 
   g->cameraRotation = quatFromPitchYawRoll(90.0f, 0.0f, 0.0f);
@@ -223,6 +250,9 @@ void gameState_init(State* state) {
   g->rotatingYawEnd = 0;
   g->rotatingRollEnd = 0;
   g->rotatingStart = quatFromPitchYawRoll(0.0f, 0.0f, 0.0f);
+
+  gameState_disableAllPastPlayers(g);
+  timeBox_init(&g->timeBox, "simple");
 
   for (int y = 0; y < WORLD_HEIGHT; y++) {
     for (int z = 0; z < WORLD_DEPTH; z++) {
@@ -275,6 +305,18 @@ void gameState_init(State* state) {
   assetsRequestTexture(TEXTURE_rock);
 
   draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
+
+  Action a;
+
+  if (!timeBox_findLastActionInSequenceOfType(&g->timeBox, &a, g->timeBox.sequence, MOVE)) {
+    logln("ERROR: could not find last action of type.");
+
+    // FIXME(harrison): Add in some sort of safeguard to stop this from happening
+  } else {
+    g->playerPos= a.move.pos;
+
+    logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
+  }
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -360,17 +402,147 @@ void gameState_rotate(GameState* g, uint32 direction) {
 }
 
 void gameState_update(State *state) {
-  {
-    for (MemoryBlock* i = lornockData->actionsArena.first; i != 0; i = i->next) {
-      Action* a = (Action*) i->start;
-      logln("got action!");
-      action_print(*a);
+  /*
+     {
+     for (MemoryBlock* i = lornockData->actionsArena.first; i != 0; i = i->next) {
+     Action* a = (Action*) i->start;
+     logln("got action!");
+     action_print(*a);
+     }
+     }*/
+
+  GameState* g = (GameState*) state->memory;
+  TimeBox* tb = &g->timeBox;
+
+  if (getTime() > tb->nextTickTime) {
+    tb->nextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
+
+    Action a;
+    while (timeBox_nextAction(tb, &a)) {
+      action_print(a);
+
+      switch (a.type) {
+        case SPAWN:
+          {
+            int id = gameState_getFirstPastPlayer(g);
+            if (id < 0) {
+              logln("WARNING: too many active past players!");
+
+              continue;
+            }
+
+            pastPlayer_init(&g->pastPlayers[id], tb, a);
+          } break;
+        default:
+          {
+            // We don't need to do anything
+          } break;
+      }
+    }
+
+    tb->time += 1;
+  }
+
+  for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+    if (!g->pastPlayers[i].exists) {
+      continue;
+    }
+
+    pastPlayer_update(&g->pastPlayers[i], tb);
+  }
+
+  gameState_setFaceDirections(g);
+
+  if (keyJustDown(KEY_tab)) {
+    int64 dest = 2;
+
+    timeBox_add(tb, action_makeJump(dest));
+    tb->jumpID += 1;
+    timeBox_save(tb);
+    timeBox_read(tb, "simple");
+    timeBox_setTime(tb, dest);
+    timeBox_add(tb, action_makeSpawn(g->playerPos));
+
+    gameState_disableAllPastPlayers(g);
+
+    uint32 lineLen = 0;
+    char* line = (char*) lornockMemory->transientStorage;
+
+    uint32 upTo = 0;
+
+    while (upTo < tb->rawLen) {
+      getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
+
+      upTo += 1;
+
+      Action spawnAction;
+
+      if (!action_parse(&spawnAction, line, lineLen)) {
+        logln("Could not parse line!");
+
+        continue;
+      }
+
+      if (spawnAction.common.time > tb->time) {
+        break;
+      }
+
+      if (spawnAction.type != SPAWN) {
+        continue;
+      }
+
+      bool needPastPlayer = true;
+      uint32 searchUpTo = upTo;
+
+      Action lastAction = spawnAction;
+
+      while (searchUpTo < tb->rawLen) {
+        getLine(line, &lineLen, &searchUpTo, tb->raw, tb->rawLen);
+        searchUpTo += 1;
+
+        Action jumpAction;
+
+        if (!action_parse(&jumpAction, line, lineLen)) {
+          logln("Could not parse line!");
+
+          continue;
+        }
+
+        if (jumpAction.common.time > tb->time) {
+          break;
+        }
+
+        if (jumpAction.common.jumpID == spawnAction.common.jumpID && jumpAction.type == MOVE) {
+          lastAction = jumpAction;
+        }
+
+        if (jumpAction.common.type != JUMP || jumpAction.common.jumpID != spawnAction.common.jumpID) {
+          continue;
+        }
+
+        needPastPlayer = false;
+
+        break;
+      }
+
+      if (needPastPlayer) {
+        int id = gameState_getFirstPastPlayer(g);
+        if (id < 0) {
+          logln("WARNING: too many active past players!");
+
+          continue;
+        }
+
+        logln("SPAWNED REMOTE PAST PLAYER");
+
+        pastPlayer_init(&g->pastPlayers[id], tb, lastAction);
+      }
     }
   }
 
-  GameState* g = (GameState*) state->memory;
-
-  gameState_setFaceDirections(g);
+  if (keyJustDown(KEY_l)) {
+    timeBox_save(tb);
+  }
 
   if (g->rotating) {
     real32 pc = 1.0f - ((float) ((g->rotatingStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
@@ -392,20 +564,30 @@ void gameState_update(State *state) {
     real32 speed = 2.0f;
     real32 dt = getDt();
 
+    vec3 move = vec3_zero;
+
     if (keyDown(KEY_a)) {
-      g->playerPos -= g->playerRight * dt * speed;
+      move -= g->playerRight;
     }
 
     if (keyDown(KEY_d)) {
-      g->playerPos += g->playerRight * dt * speed;
+      move += g->playerRight;
     }
 
     if (keyDown(KEY_w)) {
-      g->playerPos += g->playerForward * dt * speed;
+      move += g->playerForward;
     }
 
     if (keyDown(KEY_s)) {
-      g->playerPos -= g->playerForward * dt * speed;
+      move -= g->playerForward;
+    }
+
+    g->playerPos += move * dt * speed;
+
+    if (!vec3AlmostEqual(move, g->playerLastMove)) {
+      timeBox_add(tb, action_makeMove(g->playerPos));
+
+      g->playerLastMove = move;
     }
 
     if (keyJustDown(KEY_shift)) {
@@ -467,5 +649,26 @@ void gameState_update(State *state) {
     model = mat4Scale(model, vec3_one*scale);
 
     draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+  }
+
+  {
+    draw_setShader(shader(SHADER_default));
+
+    for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+      PastPlayer pp = g->pastPlayers[i];
+
+      if (!pp.exists) {
+        continue;
+      }
+
+      real32 scale = 0.25f;
+
+      mat4 model = mat4d(1.0f);
+      model = mat4Translate(model, pp.pos);
+      model = mat4Translate(model, -1*vec3_one/2*scale);
+      model = mat4Scale(model, vec3_one*scale);
+
+      draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+    }
   }
 }
