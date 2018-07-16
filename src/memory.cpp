@@ -23,6 +23,12 @@ void memoryArena_init(MemoryArena* ma, MemoryIndex size, uint8* base) {
   logfln("creating memory arena of size %zu", size);
 }
 
+void memoryArena_clear(MemoryArena* ma) {
+  memset(ma->base, 0, ma->size);
+
+  ma->first = 0;
+}
+
 #define memoryArena_pushStruct(arena, Type) ( (Type *)memoryArena_pushSize(arena, sizeof(Type)) )
 
 void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {

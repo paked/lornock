@@ -193,6 +193,8 @@ struct GameState {
   GLuint cubeVAO;
 };
 
+void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma);
+
 void gameState_setFaceDirections(GameState* g) {
   mat4 view = mat4d(1);
   view = mat4Translate(view, CAMERA_POSITION);
@@ -248,8 +250,6 @@ void gameState_init(State* state) {
   gameState_disableAllPastPlayers(g);
 
   timeBox_load(&g->timeBox, &g->timeIndex, &lornockData->actionsArena, "simple");
-  g->timeIndex.time = 0;
-  g->timeIndex.timeDoneTo = -1;
   g->timeBoxNextTickTime = 0;
 
   for (int y = 0; y < WORLD_HEIGHT; y++) {
@@ -303,6 +303,9 @@ void gameState_init(State* state) {
   assetsRequestTexture(TEXTURE_rock);
 
   draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
+
+
+  gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
 
   {
     Action a = { 0 };
@@ -415,6 +418,76 @@ void gameState_rotate(GameState* g, uint32 direction) {
   printRot(direction);
 }
 
+void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma) {
+  gameState_disableAllPastPlayers(g);
+
+  TimeIndex index = *worldIndex;
+  index.timeDoneTo = -1;
+
+  Action spawnAction;
+  while (timeBox_nextAction(tb, ma, &index, &spawnAction)) {
+    if (spawnAction.type != SPAWN || spawnAction.common.jumpID == index.jumpID) {
+      continue;
+    }
+
+    bool unresolved = true;
+
+    Action lastMove = spawnAction;
+    Action jumpAction;
+    uint64 seq = spawnAction.common.sequence + 1;
+    while (timeBox_actionInSequence(tb, ma, seq, &jumpAction)) {
+      seq += 1;
+
+      if (jumpAction.type == MOVE) {
+        lastMove = jumpAction;
+      }
+
+      if (jumpAction.common.time > index.time) {
+        break;
+      }
+
+      if (jumpAction.type == JUMP) {
+        unresolved = false;
+
+        break;
+      }
+    }
+
+    if (unresolved) {
+      logln("SPAWNING PAST PLAYER!");
+      int id = gameState_getFirstPastPlayer(g);
+      if (id < 0) {
+        logln("WARNING: too many active past players.");
+
+        continue;
+      }
+
+      pastPlayer_init(&g->pastPlayers[id], tb, worldIndex, ma, lastMove);
+    }
+  }
+}
+
+void gameState_timeJump(GameState *g, int64 destination) {
+  TimeBox* tb = &g->timeBox;
+  TimeIndex* index = &g->timeIndex;
+  MemoryArena* ma = &lornockData->actionsArena;
+
+  timeBox_add(tb, index, ma, action_makeJump(destination));
+  index->jumpID += 1;
+
+  timeBox_save(tb, *index, ma);
+  timeBox_load(tb, index, ma, "simple");
+
+  // TODO(harrison): what happens if the save or load fails?
+
+  index->time = index->timeDoneTo = destination;
+
+  timeBox_add(tb, index, ma, action_makeSpawn(g->playerPos));
+  timeBox_save(tb, *index, ma);
+
+  gameState_spawnNecessaryPastPlayers(g, tb, index, ma);
+}
+
 void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
   TimeBox* tb = &g->timeBox;
@@ -424,8 +497,6 @@ void gameState_update(State *state) {
 
     Action a;
     while (timeBox_nextAction(tb, &lornockData->actionsArena, &g->timeIndex, &a)) {
-      logfln("got action: %ld", g->timeIndex.time);
-
       switch (a.type) {
         case SPAWN:
           {
@@ -458,98 +529,14 @@ void gameState_update(State *state) {
 
   gameState_setFaceDirections(g);
 
-  /*
   if (keyJustDown(KEY_tab)) {
-    int64 dest = 2;
+    gameState_timeJump(g, 2);
+  }
 
-    timeBox_add(tb, action_makeJump(dest));
-    tb->jumpID += 1;
-    timeBox_save(tb);
-    timeBox_read(tb, "simple");
-    timeBox_setTime(tb, dest);
-    timeBox_add(tb, action_makeSpawn(g->playerPos));
-
-    gameState_disableAllPastPlayers(g);
-
-    uint32 lineLen = 0;
-    char* line = (char*) lornockMemory->transientStorage;
-
-    uint32 upTo = 0;
-
-    while (upTo < tb->rawLen) {
-      getLine(line, &lineLen, &upTo, tb->raw, tb->rawLen);
-
-      upTo += 1;
-
-      Action spawnAction;
-
-      if (!action_parse(&spawnAction, line, lineLen)) {
-        logln("Could not parse line!");
-
-        continue;
-      }
-
-      if (spawnAction.common.time > tb->time) {
-        break;
-      }
-
-      if (spawnAction.type != SPAWN) {
-        continue;
-      }
-
-      bool needPastPlayer = true;
-      uint32 searchUpTo = upTo;
-
-      Action lastAction = spawnAction;
-
-      while (searchUpTo < tb->rawLen) {
-        getLine(line, &lineLen, &searchUpTo, tb->raw, tb->rawLen);
-        searchUpTo += 1;
-
-        Action jumpAction;
-
-        if (!action_parse(&jumpAction, line, lineLen)) {
-          logln("Could not parse line!");
-
-          continue;
-        }
-
-        if (jumpAction.common.time > tb->time) {
-          break;
-        }
-
-        if (jumpAction.common.jumpID == spawnAction.common.jumpID && jumpAction.type == MOVE) {
-          lastAction = jumpAction;
-        }
-
-        if (jumpAction.common.type != JUMP || jumpAction.common.jumpID != spawnAction.common.jumpID) {
-          continue;
-        }
-
-        needPastPlayer = false;
-
-        break;
-      }
-
-      if (needPastPlayer) {
-        int id = gameState_getFirstPastPlayer(g);
-        if (id < 0) {
-          logln("WARNING: too many active past players!");
-
-          continue;
-        }
-
-        logln("SPAWNED REMOTE PAST PLAYER");
-
-        pastPlayer_init(&g->pastPlayers[id], tb, lastAction);
-      }
-    }
-  }*/
-
-/*
   if (keyJustDown(KEY_l)) {
-    timeBox_save(tb);
-  }*/
+    logln("saving!");
+    timeBox_save(tb, g->timeIndex, &lornockData->actionsArena);
+  }
 
   if (g->rotating) {
     real32 pc = 1.0f - ((float) ((g->rotatingStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
@@ -591,12 +578,11 @@ void gameState_update(State *state) {
 
     g->playerPos += move * dt * speed;
 
-    /*
     if (!vec3AlmostEqual(move, g->playerLastMove)) {
-      timeBox_add(tb, action_makeMove(g->playerPos));
+      timeBox_add(tb, &g->timeIndex, &lornockData->actionsArena, action_makeMove(g->playerPos));
 
       g->playerLastMove = move;
-    }*/
+    }
 
     if (keyJustDown(KEY_shift)) {
       vec3 realRight = g->faceRight;

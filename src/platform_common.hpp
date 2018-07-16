@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: refactor the non-platform related stuff into a separate file
-
 #include <cstdio>
 
 // TODO: come up with a nicer name for dbg_assert
