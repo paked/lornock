@@ -5,18 +5,16 @@ Todo:
 - Make billboarding work on a per face basis
 - Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct
-- Generalise billboard renderer
 - Lighting
 - Have things on the world
   - Have things on the world which change over time
 - Fix number keys not triggering input events
+- Hot reloading for assets
+- Create a temporary memory pool / arena which can be used to allocate memory which will be cleared after a frame.
+  - Used for loading assets?
+  - Used for getting debug strings
 
 In progress:
-- [ ] Refactor TimeBox back into GameState
-  - [x] Create a MemoryArena for storing this memory, and an ActionPool struct to put in MemoryBlocks
-  - [ ] Refactor TimeBox to use MemoryArena for it's actions instead of re-parsing at runtime
-  - [ ] Ensure the TimeBox is GOOD CODE.
-    - Make TimeBox stateless, parse in `TimeBoxIndex` to the functions to control where it searches from
 - [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
@@ -29,6 +27,12 @@ In progress:
   - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Fix the weird wrong face bug
+- [x] Refactor TimeBox back into GameState
+  - [x] Create a MemoryArena for storing this memory, and an ActionPool struct to put in MemoryBlocks
+  - [x] Refactor TimeBox to use MemoryArena for it's actions instead of re-parsing at runtime
+  - [x] Ensure the TimeBox is GOOD CODE.
+    - Make TimeBox stateless, parse in `TimeBoxIndex` to the functions to control where it searches from
 - [x] Begin work porting time travel code over
   - [x] Create Action datastructures
   - [x] Parse timeline file
