@@ -74,14 +74,15 @@ add_custom_command(TARGET lornock PRE_BUILD
     COMMENT "copying over saves"
     VERBATIM)
 
-# We use a bit of a basterdised version of C++11, but it's C++11 no less
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -g")
 
 # Runs if building for a native platform (currently only Linux)
 if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
     # TODO(harrison): figure out exactly what this is for...
     if(NOT WIN32)
         set(GLAD_LIBRARIES dl)
+
+        # We use a bit of a basterdised version of C++11, but it's C++11 no less
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -g -Wall -Werror")
     endif()
 
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")

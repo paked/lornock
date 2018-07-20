@@ -1,3 +1,9 @@
+/*
+ * THE FOLLOWING ARE GCC IGNORE OPTIONS WHICH I (harrison) AM ADDING MYSELF. SO I CAN COMPILE WITH SOME SUPER STRICT COMPILE FLAGS.
+ */
+
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 /* stb_image - v2.19 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 

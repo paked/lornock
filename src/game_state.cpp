@@ -550,7 +550,6 @@ void gameState_update(State *state) {
   } else {
     real32 speed = 2.0f;
     real32 dt = getDt();
-    uint32 currentFace = gameState_getCurrentFace(g);
 
     vec3 right = g->playerRight;
     vec3 forward = g->playerForward;

@@ -135,7 +135,7 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
 
   uint32 lineI = 0;
 
-  for (lineI; lineI < lineLen; lineI++) {
+  for (; lineI < lineLen; lineI++) {
     actionName[lineI] = '\0';
 
     char c = line[lineI];
@@ -173,7 +173,7 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
     return false;
   }
 
-  for (lineI; lineI < lineLen; lineI++) {
+  for (; lineI < lineLen; lineI++) {
     eatUntilChar(paramName, 64 , '=', line, lineLen, &lineI);
     lineI++; // skip '=' sign
     eatUntilChar(paramValue, 64 , ' ', line, lineLen, &lineI);
@@ -408,7 +408,7 @@ bool timeBox_nextActionInSequence(TimeBox* tb, MemoryArena* ma, uint64 sequence,
   for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
-    for (int i = 0; i < ac->count; i++) {
+    for (uint64 i = 0; i < ac->count; i++) {
       Action t = ac->actions[i];
 
       if (t.common.sequence == sequence + 1) {
@@ -426,7 +426,7 @@ bool timeBox_actionInSequence(TimeBox* tb, MemoryArena* ma, uint64 sequence, Act
   for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
-    for (int i = 0; i < ac->count; i++) {
+    for (uint64 i = 0; i < ac->count; i++) {
       Action t = ac->actions[i];
 
       if (t.common.sequence == sequence) {
@@ -448,7 +448,7 @@ bool timeBox_nextAction(TimeBox* tb, MemoryArena* ma, TimeIndex* index, Action *
   for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
-    for (int i = 0; i < ac->count; i++) {
+    for (uint64 i = 0; i < ac->count; i++) {
       Action t = ac->actions[i];
 
       if (lastTime == t.common.time) {

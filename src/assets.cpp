@@ -48,11 +48,9 @@ Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
   GLuint fragShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 
   bool failed = false;
-  GLint codeLen = 0;
   GLint errorLogLen = 0;
 
   {
-    codeLen = (GLint) vertLen;
     const char* code = (char*) vert;
 
     logln("INFO: compiling vert shader");
@@ -77,7 +75,6 @@ Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
   }
 
   {
-    codeLen = (GLint) fragLen;
     const char* code = (char*) frag;
 
     logln("INFO: compiling frag shader");
@@ -154,6 +151,8 @@ Shader shaderLoad(const char* name) {
   loadFromFile(fragFilename, &fragData, &fragLen);
 
   s = shaderInit(vertData, vertLen, fragData, fragLen);
+
+  return s;
 }
 
 bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
