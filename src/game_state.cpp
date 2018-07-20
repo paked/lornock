@@ -63,24 +63,14 @@ enum {
 
 vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
   // UP                       Right                     Forward
-  { vec3(0.0f, 0.0f, 1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Back face
   { vec3(0.0f, 0.0f, -1.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f) },   // Front face
+  { vec3(0.0f, 0.0f, 1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Back face
 
   { vec3(-1.0f, 0.0f, 0.0f),  vec3(0.0f, 1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Left face
   { vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Right face
 
   { vec3(0.0f, -1.0f, 0.0f),  vec3(1.0f, 0.0f, 0.0f),  vec3(0.0f, 0.0f, 1.0f) },  // Bottom face
   { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }  // Top face
-};
-
-uint32 faceRotationMap[MAX_FACE][ROT_IDLE] = {
-  //  FWD     BWD     LWD     RWD
-  {   BOTTOM, TOP,    LEFT,   RIGHT },  // Back face
-  {   TOP,    BOTTOM, LEFT,   RIGHT },  // Front face
-  {   TOP,    BOTTOM, BACK,   FRONT },  // Left face
-  {   TOP,    BOTTOM, FRONT,  BACK  },  // Right face
-  {   FRONT,  BACK,   LEFT,   RIGHT },  // Bottom face
-  {   BACK,   FRONT,  LEFT,   RIGHT }   // Top face
 };
 
 bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
@@ -159,7 +149,6 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
 #define ROTATION_DURATION 400
 
 struct GameState {
-  uint32 currentFace;
   vec3 faceRight;
   vec3 faceForward;
 
@@ -192,6 +181,18 @@ struct GameState {
 
   GLuint cubeVAO;
 };
+
+uint32 gameState_getCurrentFace(GameState *g) {
+  for (int i = 0; i < MAX_FACE; i++) {
+    if (vec3AlmostEqual(faceCardinalDirections[i][DIRECTION_UP], g->playerUp)) {
+      return i;
+    }
+  }
+
+  assert(false);
+
+  return -1;
+}
 
 void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma);
 
@@ -228,12 +229,11 @@ void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
-  g->currentFace = TOP;
   gameState_setFaceDirections(g); // g->faceRight, g->faceForward
 
-  g->playerUp = faceCardinalDirections[g->currentFace][DIRECTION_UP];
-  g->playerRight = faceCardinalDirections[g->currentFace][DIRECTION_RIGHT];
-  g->playerForward = faceCardinalDirections[g->currentFace][DIRECTION_FORWARD];
+  g->playerUp = faceCardinalDirections[TOP][DIRECTION_UP];
+  g->playerRight = faceCardinalDirections[TOP][DIRECTION_RIGHT];
+  g->playerForward = faceCardinalDirections[TOP][DIRECTION_FORWARD];
   g->playerPos = vec3(0.0f, 1.5f, 0.0f);
   g->playerLastMove = vec3_zero;
   g->playerRotation = mat4d(1.0f);
@@ -399,12 +399,7 @@ void gameState_rotate(GameState* g, uint32 direction) {
       } break;
   }
 
-  logln("old:");
-  printFace(g->currentFace);
-  printRot(direction);
-
   g->playerRotation = g->playerRotation * rot;
-  g->currentFace = faceRotationMap[g->currentFace][direction];
 
   g->rotating = true;
   g->rotatingStart = g->cameraRotation;
@@ -412,10 +407,6 @@ void gameState_rotate(GameState* g, uint32 direction) {
   g->rotatingPitchEnd = 90.0f * pitchFactor;
   g->rotatingYawEnd = 90.0f * yawFactor;
   g->rotatingRollEnd = 0.0f;
-
-  logln("new:");
-  printFace(g->currentFace);
-  printRot(direction);
 }
 
 void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma) {
@@ -492,6 +483,8 @@ void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
   TimeBox* tb = &g->timeBox;
 
+  printFace(gameState_getCurrentFace(g));
+
   if (getTime() > g->timeBoxNextTickTime) {
     g->timeBoxNextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
 
@@ -557,23 +550,27 @@ void gameState_update(State *state) {
   } else {
     real32 speed = 2.0f;
     real32 dt = getDt();
+    uint32 currentFace = gameState_getCurrentFace(g);
+
+    vec3 right = g->playerRight;
+    vec3 forward = g->playerForward;
 
     vec3 move = vec3_zero;
 
     if (keyDown(KEY_a)) {
-      move -= g->playerRight;
+      move -= right;
     }
 
     if (keyDown(KEY_d)) {
-      move += g->playerRight;
+      move += right;
     }
 
     if (keyDown(KEY_w)) {
-      move += g->playerForward;
+      move += forward;
     }
 
     if (keyDown(KEY_s)) {
-      move -= g->playerForward;
+      move -= forward;
     }
 
     g->playerPos += move * dt * speed;
@@ -586,17 +583,21 @@ void gameState_update(State *state) {
 
     if (keyJustDown(KEY_shift)) {
       vec3 realRight = g->faceRight;
-      vec3 realForward = g->faceForward * -1;
+      vec3 realForward = g->faceForward;
 
       real32 rightLen = vec3Sum(g->playerPos * realRight);
       real32 forwardLen = vec3Sum(g->playerPos * realForward);
 
-      logfln("playerRightlen: %f, forwardlen: %f", rightLen, forwardLen);
+      uint32 direction = ROT_IDLE;
 
       if (fabs(rightLen) > 1.49f) {
-        gameState_rotate(g, (rightLen > 0) ? ROT_RIGHT : ROT_LEFT);
+        direction = (rightLen > 0) ? ROT_RIGHT : ROT_LEFT;
       } else if (fabs(forwardLen) > 1.49f) {
-        gameState_rotate(g, (forwardLen < 0) ? ROT_FORWARD : ROT_BACKWARD);
+        direction = (forwardLen > 0) ? ROT_FORWARD : ROT_BACKWARD;
+      }
+
+      if (direction != ROT_IDLE) {
+        gameState_rotate(g, direction);
       }
     }
 
