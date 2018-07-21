@@ -49,12 +49,13 @@ void draw_3d_mesh(Mesh mesh, mat4 model, Texture t) {
   glBindVertexArray(0);
 }
 
-void draw_3d_model(Model m, mat4 model) {
+void draw_3d_model(Model m, mat4 model, Texture t) {
   shaderSetMatrix(&draw.activeShader, "model", model);
 
   shaderSetMatrix(&draw.activeShader, "view", draw.view);
   shaderSetMatrix(&draw.activeShader, "projection", draw.projection);
 
+  glBindTexture(GL_TEXTURE_2D, t.id);
   glBindVertexArray(m.vao);
   glDrawArrays(GL_TRIANGLES, 0, m.vertCount);
   glBindVertexArray(0);

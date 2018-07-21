@@ -62,6 +62,7 @@ set(DATA_FILES
 
     data/img/player.png
     data/img/rock.png
+    data/img/rock_albedo.png
     data/img/test.png)
 
 foreach(DATA_FILE ${DATA_FILES})

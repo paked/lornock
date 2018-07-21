@@ -302,6 +302,7 @@ void gameState_init(State* state) {
   assetsRequestTexture(TEXTURE_test);
   assetsRequestTexture(TEXTURE_player);
   assetsRequestTexture(TEXTURE_rock);
+  assetsRequestTexture(TEXTURE_rock_albedo);
   assetsRequestModel(MODEL_rock);
 
   draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
@@ -663,14 +664,14 @@ void gameState_update(State *state) {
 
       draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
     }
+  }*/
 
   {
-    draw_setShader(shader(SHADER_color));
+    draw_setShader(shader(SHADER_default));
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(model, vec3(0.0f, 0.0f, 0.0f));
 
-    // draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
-    draw_3d_model(model(MODEL_rock), model);
+    draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
   }
 }
