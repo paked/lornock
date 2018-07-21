@@ -9,6 +9,7 @@ struct LornockData {
 
   State state;
 
+  MemoryArena tempArena;
   MemoryArena actionsArena;
 }* lornockData = 0;
 
@@ -16,9 +17,12 @@ struct LornockData {
 #define assetsReleaseShader(i) lornockData->assets.shaderRequests[i]--
 #define assetsRequestTexture(i) lornockData->assets.textureRequests[i]++
 #define assetsReleaseTexture(i) lornockData->assets.textureRequests[i]--
+#define assetsRequestModel(i) lornockData->assets.modelRequests[i]++
+#define assetsReleaseModel(i) lornockData->assets.modelRequests[i]--
 
 #define shader(i) lornockData->assets.shaders[i]
 #define texture(i) lornockData->assets.textures[i]
+#define model(i) lornockData->assets.models[i]
 
 void updateAssets() {
   for (uint32 i = 0; i < MAX_SHADER; i++) {
@@ -49,6 +53,22 @@ void updateAssets() {
         logln("Destroyed texture");
 
         textureClean(&texture(i));
+      }
+    }
+  }
+
+  for (uint32 i = 0; i < MAX_MODEL; i++) {
+    if (lornockData->assets.modelRequests[i] > 0) {
+      if (model(i).vao == 0) {
+        logln("Created model");
+
+        model(i) = model_init(modelFilename(i));
+      }
+    } else {
+      if (model(i).vao != 0)  {
+        logln("Destroyed model");
+
+        model_clean(&model(i));
       }
     }
   }

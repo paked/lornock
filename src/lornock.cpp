@@ -27,6 +27,9 @@ LornockMemory* lornockMemory = 0;
 //
 // Lornock code
 //
+#include <memory.hpp>
+
+MemoryArena* tempMemory = 0;
 
 // Utilities
 #include <hmm_wrapper.cpp>
@@ -35,7 +38,6 @@ LornockMemory* lornockMemory = 0;
 #include <globals.cpp>
 
 // Real code
-#include <memory.cpp>
 #include <assets.cpp>
 #include <draw.cpp>
 #include <lornock_data.cpp>
@@ -59,16 +61,27 @@ extern "C" int lornockInit(Platform* p) {
 
 extern "C" void lornockUpdate(LornockMemory* m) {
   lornockMemory = m;
-
   lornockData = (LornockData*) m->permanentStorage;
+
+  tempMemory = &lornockData->tempArena;
 
   dbg_assert(sizeof(*lornockData) < m->permanentStorageSize);
 
   if (!m->initialized) {
+    uint8* head = (uint8*) m->permanentStorage + sizeof(*lornockData);
+    MemoryIndex arenaSize = (m->permanentStorageSize - sizeof(*lornockData))/2;
+
+    memoryArena_init(
+        &lornockData->tempArena,
+        arenaSize,
+        head);
+
+    head += arenaSize;
+
     memoryArena_init(
         &lornockData->actionsArena,
-        m->permanentStorageSize - sizeof(*lornockData),
-        (uint8*) m->permanentStorage + sizeof(*lornockData));
+        arenaSize,
+        head);
 
     stbi_set_flip_vertically_on_load(true);
 

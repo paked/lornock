@@ -12,6 +12,13 @@ enum {
 #undef texture
 };
 
+enum {
+#define model(name) MODEL_ ##name,
+#include <assets_models.cpp>
+  MAX_MODEL
+#undef model
+};
+
 const char* shaderFilenames[MAX_SHADER] = {
 #define shader(name) #name,
 #include <assets_shaders.cpp>
@@ -35,6 +42,19 @@ const char* textureFilename(uint32 i) {
 
   return textureFilenames[i];
 }
+
+const char* modelFilenames[MAX_MODEL] = {
+#define model(name) #name,
+#include <assets_models.cpp>
+#undef model
+};
+
+const char* modelFilename(uint32 i) {
+  dbg_assert(i >= 0 && i < MAX_MODEL);
+
+  return modelFilenames[i];
+}
+
 
 struct Shader {
   GLuint id;
@@ -158,7 +178,7 @@ Shader shaderLoad(const char* name) {
 bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
-    logfln("ERROR: find uniform location %s", name);
+    logfln("ERROR: cannot find uniform location %s", name);
 
     return false;
   }
@@ -171,7 +191,7 @@ bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
 bool shaderSetVec3(Shader* shader, const char* name, vec3 v) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
-    logfln("ERROR: find uniform location %s", name);
+    logfln("ERROR: cannot find uniform location %s", name);
 
     return false;
   }
@@ -184,7 +204,7 @@ bool shaderSetVec3(Shader* shader, const char* name, vec3 v) {
 bool shaderSetVec2(Shader* shader, const char* name, vec2 v) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
-    logfln("ERROR: find uniform location %s", name);
+    logfln("ERROR: cannot find uniform location %s", name);
 
     return false;
   }
@@ -253,14 +273,6 @@ void textureClean(Texture* tex) {
   tex->id = 0;
 }
 
-struct Assets {
-  int32 shaderRequests[MAX_SHADER];
-  Shader shaders[MAX_SHADER];
-
-  int32 textureRequests[MAX_TEXTURE];
-  Texture textures[MAX_TEXTURE];
-};
-
 struct Mesh {
   GLuint vao;
   GLuint vbo;
@@ -288,6 +300,9 @@ Mesh mesh_init(real32* verts, uint64 count) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+
   m.vao = vao;
   m.vbo = vbo;
   m.vertCount = count;
@@ -295,3 +310,294 @@ Mesh mesh_init(real32* verts, uint64 count) {
 
   return m;
 }
+
+struct Model {
+  GLuint vao;
+
+  GLuint vertexBuffer;
+  GLuint uvBuffer;
+  GLuint normalBuffer;
+
+  uint64 vertCount;
+};
+
+#define MAX_OBJ_VERTICES (24576)
+
+#define MAX_VERTEX_BYTES (MAX_OBJ_VERTICES*sizeof(vec3))
+#define MAX_UV_BYTES (MAX_OBJ_VERTICES*sizeof(vec2))
+#define MAX_NORMAL_BYTES (MAX_OBJ_VERTICES*sizeof(vec3))
+
+#define MAX_VERTEX_INDEX_BYTES (MAX_OBJ_VERTICES*sizeof(int32))
+#define MAX_UV_INDEX_BYTES (MAX_OBJ_VERTICES*sizeof(int32))
+#define MAX_NORMAL_INDEX_BYTES (MAX_OBJ_VERTICES*sizeof(int32))
+
+#define MAX_FINAL_VERTEX_FLOATS (MAX_OBJ_VERTICES*3)
+#define MAX_FINAL_VERTEX_BYTES (MAX_FINAL_VERTEX_FLOATS*sizeof(real32))
+
+#define MAX_FINAL_UV_FLOATS (MAX_OBJ_VERTICES*2)
+#define MAX_FINAL_UV_BYTES (MAX_FINAL_UV_FLOATS*sizeof(real32))
+
+#define MAX_FINAL_NORMAL_FLOATS (MAX_OBJ_VERTICES*3)
+#define MAX_FINAL_NORMAL_BYTES (MAX_FINAL_NORMAL_FLOATS*sizeof(real32))
+
+Model model_init(const char* name) {
+  Model m = { 0 };
+
+  MemoryArena* temp = tempMemory;
+
+  assert(MAX_VERTEX_BYTES + MAX_UV_BYTES + MAX_NORMAL_BYTES +
+      MAX_VERTEX_INDEX_BYTES + MAX_UV_INDEX_BYTES + MAX_NORMAL_INDEX_BYTES +
+      MAX_FINAL_VERTEX_BYTES + MAX_FINAL_UV_BYTES + MAX_FINAL_NORMAL_BYTES
+      < temp->size);
+
+  char meshFilename[64];
+  snprintf(meshFilename, 64, "data/mesh/%s.obj", name);
+
+  void* rawData;
+  uint32 len = 0;
+
+  loadFromFile(meshFilename, &rawData, &len);
+
+  vec3* verts = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, vec3);
+  vec2* uvs = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, vec2);
+  vec3* normals = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, vec3);
+
+  uint32 vertsCount = 0;
+  uint32 normalsCount = 0;
+  uint32 uvsCount = 0;
+
+  int32* vertexIndex = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, int32);
+  int32* uvIndex = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, int32);
+  int32* normalIndex = memoryArena_pushArray(temp, MAX_OBJ_VERTICES, int32);
+
+  uint32 faceCount = 0;
+
+  uint32 vertIndexCount = 0;
+  uint32 uvIndexCount = 0;
+  uint32 normalIndexCount = 0;
+
+  real32* finalVerts = memoryArena_pushArray(temp, MAX_FINAL_VERTEX_FLOATS, real32);
+  real32* finalUVs = memoryArena_pushArray(temp, MAX_FINAL_UV_FLOATS, real32);
+  real32* finalNormals = memoryArena_pushArray(temp, MAX_FINAL_NORMAL_FLOATS, real32);
+
+  uint32 finalVertCount = 0;
+  uint32 finalUVCount = 0;
+  uint32 finalNormalCount = 0;
+
+  uint32 lineLen = 0;
+  char* line = memoryArena_pushArray(temp, 1024, char);
+
+  char* data = (char*) rawData;
+
+  uint32 elementLen = 1024;
+  char* element = memoryArena_pushArray(temp, elementLen, char);
+
+  uint32 head = 0;
+  while (head < len) {
+    getLine(line, &lineLen, &head, data, len);
+    head += 1;
+
+    // like head, but for the line.
+    uint32 tip = 0;
+
+    eatUntilWhitespace(element, elementLen, line, lineLen, &tip);
+
+    if (element[0] == '#') {
+      logln("found comment, skipping");
+
+      continue;
+    } else if (strcmp("v", element) == 0) {
+      vec3 vert;
+
+      int count = sscanf(line, "v %f %f %f", &vert.x, &vert.y, &vert.z);
+
+      assert(count == 3);
+
+      verts[vertsCount] = vert;
+
+      vertsCount += 1;
+
+      continue;
+    } else if (strcmp("vn", element) == 0) {
+      vec3 normal;
+
+      int count = sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
+      assert(count == 3);
+
+      normals[normalsCount] = normal;
+
+      normalsCount += 1;
+
+      continue;
+    } else if (strcmp("vt", element) == 0) {
+      vec2 uv;
+
+      int count = sscanf(line, "vt %f %f", &uv.x, &uv.y);
+      assert(count == 2);
+
+      uvs[uvsCount] = uv;
+
+      uvsCount += 1;
+
+      continue;
+    } else if (strcmp("f", element) == 0) {
+      int32 v1V;
+      int32 v1VT;
+      int32 v1VN;
+
+      int32 v2V;
+      int32 v2VT;
+      int32 v2VN;
+
+      int32 v3V;
+      int32 v3VT;
+      int32 v3VN;
+
+      int count = sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
+          &v1V, &v1VT, &v1VN,
+          &v2V, &v2VT, &v2VN,
+          &v3V, &v3VT, &v3VN);
+
+      assert(count == 9);
+
+      // populate v1, v2, v3
+
+      vertexIndex[vertIndexCount] = v1V;
+      uvIndex[uvIndexCount] = v1VT;
+      normalIndex[normalIndexCount] = v1VN;
+
+      vertIndexCount += 1;
+      uvIndexCount += 1;
+      normalIndexCount += 1;
+
+      vertexIndex[vertIndexCount] = v2V;
+      uvIndex[uvIndexCount] = v2VT;
+      normalIndex[normalIndexCount] = v2VN;
+
+      vertIndexCount += 1;
+      uvIndexCount += 1;
+      normalIndexCount += 1;
+
+      vertexIndex[vertIndexCount] = v3V;
+      uvIndex[uvIndexCount] = v3VT;
+      normalIndex[normalIndexCount] = v3VN;
+
+      vertIndexCount += 1;
+      uvIndexCount += 1;
+      normalIndexCount += 1;
+
+      faceCount += 1;
+
+      continue;
+    }
+
+    logfln("found: '%s'. don't know what to do with it", line);
+  }
+
+  logfln("processed %d verts, %d normals, %d uvs, %d faces", vertsCount, normalsCount, uvsCount, faceCount);
+
+  for (uint32 i = 0; i < vertIndexCount; i++) {
+    int32 index = vertexIndex[i] - 1;
+
+    vec3 vert = verts[index];
+
+    finalVerts[finalVertCount] = vert.x;
+    finalVertCount += 1;
+    finalVerts[finalVertCount] = vert.y;
+    finalVertCount += 1;
+    finalVerts[finalVertCount] = vert.z;
+    finalVertCount += 1;
+  }
+
+  for (uint32 i = 0; i < uvIndexCount; i++) {
+    int32 index = uvIndex[i] - 1;
+
+    vec2 uv = uvs[index];
+    finalUVs[finalUVCount] = uv.x;
+    finalUVCount += 1;
+    finalUVs[finalUVCount] = uv.y;
+    finalUVCount += 1;
+  }
+
+  for (uint32 i = 0; i < normalIndexCount; i++) {
+    int32 index = normalIndex[i] - 1;
+
+    vec3 normal = normals[index];
+    finalNormals[finalNormalCount] = normal.x;
+    finalNormalCount += 1;
+    finalNormals[finalNormalCount] = normal.y;
+    finalNormalCount += 1;
+    finalNormals[finalNormalCount] = normal.z;
+    finalNormalCount += 1;
+  }
+
+  logfln("final vert count: %d, uv count: %d, normal count %d", finalVertCount, finalUVCount, finalNormalCount);
+
+  // OpenGL time!
+
+  glGenVertexArrays(1, &m.vao);
+  glBindVertexArray(m.vao);
+
+  {
+    // Vertex buffer
+    glGenBuffers(1, &m.vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * finalVertCount, finalVerts, GL_STATIC_DRAW);
+
+    // UV buffer
+    glGenBuffers(1, &m.uvBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m.uvBuffer);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * finalUVCount, finalUVs, GL_STATIC_DRAW);
+
+    // Normal buffer
+    glGenBuffers(1, &m.normalBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m.normalBuffer);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(real32) * finalNormalCount, finalNormals, GL_STATIC_DRAW);
+
+    // Vertex attributes
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, m.vertexBuffer);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, m.uvBuffer);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, m.normalBuffer);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+
+  m.vertCount = finalVertCount/3;
+
+  memoryArena_clear(temp);
+
+  assert(m.vao != 0);
+
+  return m;
+}
+
+void model_clean(Model* m) {
+  // TODO(harrison): implement me
+
+  assert(false);
+}
+
+struct Assets {
+  int32 shaderRequests[MAX_SHADER];
+  Shader shaders[MAX_SHADER];
+
+  int32 textureRequests[MAX_TEXTURE];
+  Texture textures[MAX_TEXTURE];
+
+  int32 modelRequests[MAX_MODEL];
+  Model models[MAX_MODEL];
+};

@@ -55,6 +55,10 @@ set(DATA_FILES
     data/shaders/default.frag
     data/shaders/billboard.vert
     data/shaders/billboard.frag
+    data/shaders/color.vert
+    data/shaders/color.frag
+
+    data/mesh/rock.obj
 
     data/img/player.png
     data/img/rock.png

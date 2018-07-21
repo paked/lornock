@@ -298,12 +298,13 @@ void gameState_init(State* state) {
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
   assetsRequestShader(SHADER_default);
+  assetsRequestShader(SHADER_color);
   assetsRequestTexture(TEXTURE_test);
   assetsRequestTexture(TEXTURE_player);
   assetsRequestTexture(TEXTURE_rock);
+  assetsRequestModel(MODEL_rock);
 
   draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
-
 
   gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
 
@@ -482,8 +483,6 @@ void gameState_timeJump(GameState *g, int64 destination) {
 void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
   TimeBox* tb = &g->timeBox;
-
-  printFace(gameState_getCurrentFace(g));
 
   if (getTime() > g->timeBoxNextTickTime) {
     g->timeBoxNextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
@@ -664,5 +663,14 @@ void gameState_update(State *state) {
 
       draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
     }
+
+  {
+    draw_setShader(shader(SHADER_color));
+
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(model, vec3(0.0f, 0.0f, 0.0f));
+
+    // draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+    draw_3d_model(model(MODEL_rock), model);
   }
 }

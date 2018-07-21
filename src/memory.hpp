@@ -1,4 +1,3 @@
-// TODO(harrison): Add ability to clear an arena (and zero it)
 // TODO(harrison): Add temporary memory faculties
 
 struct MemoryBlock {
@@ -30,10 +29,12 @@ void memoryArena_clear(MemoryArena* ma) {
 }
 
 #define memoryArena_pushStruct(arena, Type) ( (Type *)memoryArena_pushSize(arena, sizeof(Type)) )
+#define memoryArena_pushArray(arena, count, Type) ( (Type *) memoryArena_pushSize(arena, (count) * sizeof(Type)) )
 
 void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {
   uint8* end;
   MemoryBlock* last = 0;
+  MemoryIndex totalSize = 0;
 
   if (ma->first == 0) {
     end = ma->base;
@@ -41,6 +42,7 @@ void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {
     MemoryBlock* i = ma->first;
     while (i != 0) {
       last = i;
+      totalSize += i->size;
 
       i = i->next;
     } 
@@ -50,10 +52,14 @@ void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {
     end = last->base + last->size;
   }
 
+  MemoryIndex blockSize = sizeof(MemoryBlock) + size;
+
+  assert(totalSize + blockSize < ma->size);
+
   MemoryBlock* block = (MemoryBlock*) end;
   block->base = end;
   block->start = end + sizeof(MemoryBlock);
-  block->size = sizeof(MemoryBlock) + size;
+  block->size = blockSize;
   block->next = 0;
 
   if (ma->first == 0) {
