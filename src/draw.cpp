@@ -11,8 +11,6 @@ struct {
 } draw;
 
 void draw_init() {
-  draw.clear = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
   draw.view = mat4d(1.0f);
 }
 
@@ -22,6 +20,8 @@ void draw_begin() {
 
   glClearColor(draw.clear.x/255.0f, draw.clear.y/255.0f, draw.clear.z/255.f, draw.clear.w);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  draw.view = mat4d(1.0f);
 }
 
 void draw_3d_begin(real32 fov) {

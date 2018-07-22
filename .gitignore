@@ -5,3 +5,4 @@ build-web
 *.png~
 *.kra~
 *autosave.kra
+*.blend1

@@ -5,7 +5,6 @@ Todo:
 - Make billboarding work on a per face basis
 - Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct
-- Lighting
 - Have things on the world
   - Have things on the world which change over time
 - Fix number keys not triggering input events
@@ -15,6 +14,9 @@ Todo:
   - Used for getting debug strings
 
 In progress:
+- [ ] Lighting
+  - Add lighting from "sun"
+  - Add small lights for player driven illumination
 - [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
@@ -27,6 +29,7 @@ In progress:
   - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Add OBJ file loader
 - [x] Fix the weird wrong face bug
 - [x] Refactor TimeBox back into GameState
   - [x] Create a MemoryArena for storing this memory, and an ActionPool struct to put in MemoryBlocks

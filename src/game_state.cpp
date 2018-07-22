@@ -133,8 +133,8 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   for (uint64 i = start; i < end; i++) {
     real32 v = cube[i];
 
-    if (i % 5 < 3) {
-      v += offset[i % 5];
+    if (i % CUBE_MESH_ELEMENT_LEN < 3) {
+      v += offset[i % CUBE_MESH_ELEMENT_LEN];
     }
 
     verts[*len] = v;
@@ -298,14 +298,13 @@ void gameState_init(State* state) {
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
   assetsRequestShader(SHADER_default);
-  assetsRequestShader(SHADER_color);
   assetsRequestTexture(TEXTURE_test);
   assetsRequestTexture(TEXTURE_player);
   assetsRequestTexture(TEXTURE_rock);
   assetsRequestTexture(TEXTURE_rock_albedo);
   assetsRequestModel(MODEL_rock);
 
-  draw.clear = vec4(18.0f, 26.0f, 47.0f, 1.0f);
+  draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
   gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
 
@@ -619,8 +618,13 @@ void gameState_update(State *state) {
     draw.view = view;
   }
 
+  vec3 lightColor = vec3_one;
+  vec3 lightPos = vec3(0.0f, 8.0f, -5.0f);
+
   {
     draw_setShader(shader(SHADER_default));
+    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
+    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
 
     vec3 asteroidPosition = vec3(0, 0, 0);
     vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
@@ -634,6 +638,8 @@ void gameState_update(State *state) {
 
   {
     draw_setShader(shader(SHADER_default));
+    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
+    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
 
     real32 scale = 0.25f;
 
@@ -664,13 +670,15 @@ void gameState_update(State *state) {
 
       draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
     }
-  }*/
+  }
 
   {
     draw_setShader(shader(SHADER_default));
+    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
+    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
 
     mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, vec3(0.0f, 0.0f, 0.0f));
+    model = mat4Translate(model, vec3(0.00f, 1.3f, 0.00f));
 
     draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
   }
