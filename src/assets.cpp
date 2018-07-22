@@ -247,7 +247,7 @@ Texture textureInit(void* data, uint32 len) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, t.w, t.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, t.w, t.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data);
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
 

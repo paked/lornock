@@ -13,7 +13,7 @@ out vec4 FragColor;
 void main() {
     vec4 objectColor = texture(ourTexture, TexCoord);
 
-    float ambientStrength = 0.2;
+    float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * lightColor;
 
     vec3 norm = normalize(Normal);
@@ -27,4 +27,7 @@ void main() {
     FragColor = vec4(result, 1.0);
 
 	FragColor *= objectColor;
+
+    float gamma = 2.2;
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
 }

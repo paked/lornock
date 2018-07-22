@@ -85,15 +85,12 @@ extern "C" void lornockUpdate(LornockMemory* m) {
 
     stbi_set_flip_vertically_on_load(true);
 
+    draw_init();
+
     stateInit(&lornockData->state, STATE_game);
 
     // Refresh assets
     updateAssets();
-
-    // TODO: refactor into drawInit or something
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m->initialized = true;
   }
