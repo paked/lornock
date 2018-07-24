@@ -87,7 +87,7 @@ Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
 
     glGetShaderiv(vertShaderID, GL_INFO_LOG_LENGTH, &errorLogLen);
     if (errorLogLen) {
-      char errorLog[errorLogLen]; 
+      char errorLog[512];
       glGetShaderInfoLog(vertShaderID, errorLogLen, 0, errorLog);
 
       log("ERROR: Could not compile vertex shader: %s", errorLog);

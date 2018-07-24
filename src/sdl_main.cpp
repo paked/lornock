@@ -33,8 +33,19 @@ GameLibInitFunction gameLibInitFunction;
 #elif _WIN32
 #include <sdl_win32.cpp>
 
+// Implemented
+#define ALLOCATE_MEMORY_FUNC win32_allocateMemory
+
+// Stubbed
+#define LOAD_FROM_FILE_FUNC win32_loadFromFile
+#define WRITE_TO_FILE_FUNC win32_writeToFile
+#define LIB_NEEDS_RELOADING_FUNC win32_libNeedsReloading
+#define LIB_RELOAD_FUNC win32_libReload
+#define LIB_IS_VALID_FUNC win32_libIsValid
+#define LIB_EXISTS_FUNC win32_libExists
+
 #else
-// TODO(harrison): This platform is not supported!
+#error This platform is not supported. Add the relevant sdl_<plat>.cpp implementation file with the required functions.
 #endif
 
 // Config
@@ -78,7 +89,7 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
   return key;
 }
 
-int main(void) {
+int main(int argc, char** argv) {
   if(SDL_Init(SDL_INIT_VIDEO) < 0) {
     logln("ERROR: Could not init SDL video");
 

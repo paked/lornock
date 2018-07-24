@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(lornock)
+project(lornock_game)
 
 #
 # Vendored code
@@ -13,7 +13,7 @@ file(GLOB STB_IMAGE_INCLUDE_DIRS vendor/stb)
 file(GLOB HANDMADE_MATH_INCLUDE_DIRS vendor/HandmadeMath)
 
 #
-# Lornock game code (liblornock.so/lornock.dll
+# Lornock game code (liblornock.so/lornock.dll)
 #
 
 file(GLOB LIB_SOURCES
@@ -79,7 +79,6 @@ add_custom_command(TARGET lornock PRE_BUILD
     COMMENT "copying over saves"
     VERBATIM)
 
-
 # Runs if building for a native platform (currently only Linux)
 if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
     # TODO(harrison): figure out exactly what this is for...
@@ -91,16 +90,12 @@ if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
     endif()
 
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-
 	find_package(SDL2 REQUIRED)
 
-	include_directories(${SDL2_INCLUDE_DIR})
+	target_include_directories(game ${SDL2_INCLUDE_DIR})
 
 	target_link_libraries(game ${SDL2_LIBRARY}
-						 ${SDL2_IMAGE_LIBRARIES}
-						 ${SDL2_TTF_LIBRARIES}
                          ${GLAD_LIBRARIES})
-
 #[[ 
 # FIXME(harrison): I've disabled Emscripten builds until I get native builds working.
 elseif(EMSCRIPTEN)
