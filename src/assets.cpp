@@ -60,7 +60,7 @@ struct Shader {
   GLuint id;
 };
 
-Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
+Shader shader_init(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
   Shader s = {0};
 
   // Create shaders
@@ -152,7 +152,7 @@ Shader shaderInit(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
   return s;
 }
 
-Shader shaderLoad(const char* name) {
+Shader shader_load(const char* name) {
   Shader s = {0};
 
   void* vertData;
@@ -170,12 +170,12 @@ Shader shaderLoad(const char* name) {
   loadFromFile(vertFilename, &vertData, &vertLen);
   loadFromFile(fragFilename, &fragData, &fragLen);
 
-  s = shaderInit(vertData, vertLen, fragData, fragLen);
+  s = shader_init(vertData, vertLen, fragData, fragLen);
 
   return s;
 }
 
-bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
+bool shader_setMatrix(Shader* shader, const char* name, mat4 m) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
     logfln("ERROR: cannot find uniform location %s", name);
@@ -188,7 +188,7 @@ bool shaderSetMatrix(Shader* shader, const char* name, mat4 m) {
   return true;
 }
 
-bool shaderSetVec3(Shader* shader, const char* name, vec3 v) {
+bool shader_setVec3(Shader* shader, const char* name, vec3 v) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
     logfln("ERROR: cannot find uniform location %s", name);
@@ -201,7 +201,7 @@ bool shaderSetVec3(Shader* shader, const char* name, vec3 v) {
   return true;
 }
 
-bool shaderSetVec2(Shader* shader, const char* name, vec2 v) {
+bool shader_setVec2(Shader* shader, const char* name, vec2 v) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {
     logfln("ERROR: cannot find uniform location %s", name);
@@ -214,7 +214,7 @@ bool shaderSetVec2(Shader* shader, const char* name, vec2 v) {
   return true;
 }
 
-void shaderClean(Shader* shader) {
+void shader_clean(Shader* shader) {
   glDeleteProgram(shader->id);
   shader->id = 0;
 }
@@ -226,7 +226,7 @@ struct Texture {
   uint32 h;
 };
 
-Texture textureInit(void* data, uint32 len) {
+Texture texture_init(void* data, uint32 len) {
   Texture t;
 
   int w, h;
@@ -256,7 +256,7 @@ Texture textureInit(void* data, uint32 len) {
   return t;
 }
 
-Texture textureLoad(const char* name) {
+Texture texture_load(const char* name) {
   char textureFilename[64];
   snprintf(textureFilename, 64, "data/img/%s.png", name);
 
@@ -265,10 +265,10 @@ Texture textureLoad(const char* name) {
 
   loadFromFile(textureFilename, &data, &dataLen);
 
-  return textureInit(data, dataLen);
+  return texture_init(data, dataLen);
 }
 
-void textureClean(Texture* tex) {
+void texture_clean(Texture* tex) {
   glDeleteTextures(1, &tex->id);
   tex->id = 0;
 }

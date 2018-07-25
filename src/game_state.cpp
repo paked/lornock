@@ -73,6 +73,10 @@ vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
   { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }  // Top face
 };
 
+#define WORLD_WIDTH 3
+#define WORLD_HEIGHT 3
+#define WORLD_DEPTH 3
+
 bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
   int offsetX = 0;
   int offsetY = 0;
@@ -297,12 +301,12 @@ void gameState_init(State* state) {
   real32 cubeData[] = CUBE_MESH_DATA;
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
-  assetsRequestShader(SHADER_default);
-  assetsRequestTexture(TEXTURE_test);
-  assetsRequestTexture(TEXTURE_player);
-  assetsRequestTexture(TEXTURE_rock);
-  assetsRequestTexture(TEXTURE_rock_albedo);
-  assetsRequestModel(MODEL_rock);
+  assets_requestShader(SHADER_default);
+  assets_requestTexture(TEXTURE_test);
+  assets_requestTexture(TEXTURE_player);
+  assets_requestTexture(TEXTURE_rock);
+  assets_requestTexture(TEXTURE_rock_albedo);
+  assets_requestModel(MODEL_rock);
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
@@ -623,8 +627,8 @@ void gameState_update(State *state) {
 
   {
     draw_setShader(shader(SHADER_default));
-    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
-    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
+    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
+    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
 
     vec3 asteroidPosition = vec3(0, 0, 0);
     vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
@@ -638,8 +642,8 @@ void gameState_update(State *state) {
 
   {
     draw_setShader(shader(SHADER_default));
-    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
-    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
+    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
+    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
 
     real32 scale = 0.25f;
 
@@ -674,8 +678,8 @@ void gameState_update(State *state) {
 
   {
     draw_setShader(shader(SHADER_default));
-    shaderSetVec3(&draw.activeShader, "lightColor", lightColor);
-    shaderSetVec3(&draw.activeShader, "lightPos", lightPos);
+    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
+    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(model, vec3(0.00f, 1.3f, 0.00f));

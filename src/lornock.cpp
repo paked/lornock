@@ -87,15 +87,15 @@ extern "C" void lornockUpdate(LornockMemory* m) {
 
     draw_init();
 
-    stateInit(&lornockData->state, STATE_game);
+    state_init(&lornockData->state, STATE_game);
 
     // Refresh assets
-    updateAssets();
+    lornockData_assetsUpdate();
 
     m->initialized = true;
   }
 
-  updateAssets();
+  lornockData_assetsUpdate();
 
-  stateUpdate(&lornockData->state);
+  state_update(&lornockData->state);
 }

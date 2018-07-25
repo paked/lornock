@@ -92,7 +92,7 @@ if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 	find_package(SDL2 REQUIRED)
 
-	target_include_directories(game ${SDL2_INCLUDE_DIR})
+	include_directories(game ${SDL2_INCLUDE_DIR})
 
 	target_link_libraries(game ${SDL2_LIBRARY}
                          ${GLAD_LIBRARIES})

@@ -42,10 +42,10 @@ void draw_setShader(Shader s) {
 }
 
 void draw_3d_mesh(Mesh mesh, mat4 model, Texture t) {
-  shaderSetMatrix(&draw.activeShader, "model", model);
+  shader_setMatrix(&draw.activeShader, "model", model);
 
-  shaderSetMatrix(&draw.activeShader, "view", draw.view);
-  shaderSetMatrix(&draw.activeShader, "projection", draw.projection);
+  shader_setMatrix(&draw.activeShader, "view", draw.view);
+  shader_setMatrix(&draw.activeShader, "projection", draw.projection);
 
   glBindTexture(GL_TEXTURE_2D, t.id);
   glBindVertexArray(mesh.vao);
@@ -54,10 +54,10 @@ void draw_3d_mesh(Mesh mesh, mat4 model, Texture t) {
 }
 
 void draw_3d_model(Model m, mat4 model, Texture t) {
-  shaderSetMatrix(&draw.activeShader, "model", model);
+  shader_setMatrix(&draw.activeShader, "model", model);
 
-  shaderSetMatrix(&draw.activeShader, "view", draw.view);
-  shaderSetMatrix(&draw.activeShader, "projection", draw.projection);
+  shader_setMatrix(&draw.activeShader, "view", draw.view);
+  shader_setMatrix(&draw.activeShader, "projection", draw.projection);
 
   glBindTexture(GL_TEXTURE_2D, t.id);
   glBindVertexArray(m.vao);
