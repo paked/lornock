@@ -116,7 +116,7 @@ void draw_rectangle(Rect rect, vec4 color) {
   draw_setShader(shader(SHADER_rectangle));
 
   mat4 model = mat4d(1.0f);
-  model = mat4Translate(model, vec3(rect.x, rect.y, 0.0f));
+  model = mat4Translate(model, vec3(rect.x, rect.y, 0));
   model = mat4Scale(model, vec3(rect.w, rect.h, 1));
 
   shader_setMatrix(&draw.activeShader, "model", model);
@@ -127,13 +127,26 @@ void draw_rectangle(Rect rect, vec4 color) {
 
   glBindVertexArray(draw.quadVAO);
 
-  glEnableVertexAttribArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, draw.quadVertexBuffer);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glBindVertexArray(0);
+}
 
-  glEnableVertexAttribArray(1);
-  glBindBuffer(GL_ARRAY_BUFFER, draw.quadUVBuffer);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+void draw_sprite(Rect rect, Texture t) {
+  // TODO(harrison): have own repository of shaders, do not use the user ones.
+
+  draw_setShader(shader(SHADER_sprite));
+
+  mat4 model = mat4d(1.0f);
+  model = mat4Translate(model, vec3(rect.x, rect.y, 0));
+  model = mat4Scale(model, vec3(rect.w, rect.h, 1));
+
+  shader_setMatrix(&draw.activeShader, "model", model);
+  shader_setMatrix(&draw.activeShader, "view", draw.view);
+  shader_setMatrix(&draw.activeShader, "projection", draw.projection);
+
+  glBindTexture(GL_TEXTURE_2D, t.id);
+
+  glBindVertexArray(draw.quadVAO);
 
   glDrawArrays(GL_TRIANGLES, 0, 6);
   glBindVertexArray(0);

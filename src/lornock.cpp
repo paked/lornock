@@ -41,6 +41,7 @@ MemoryArena* tempMemory = 0;
 #include <assets.cpp>
 #include <lornock_data.cpp>
 #include <draw.cpp>
+#include <ui.cpp>
 #include <states.cpp>
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set

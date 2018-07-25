@@ -55,6 +55,8 @@ set(DATA_FILES
     data/shaders/default.frag
     data/shaders/rectangle.vert
     data/shaders/rectangle.frag
+    data/shaders/sprite.vert
+    data/shaders/sprite.frag
 
     data/mesh/rock.obj
 

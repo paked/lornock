@@ -302,6 +302,8 @@ void gameState_init(State* state) {
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
   assets_requestShader(SHADER_default);
+  assets_requestShader(SHADER_sprite);
+  assets_requestShader(SHADER_rectangle);
   assets_requestShader(SHADER_rectangle);
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
@@ -688,15 +690,22 @@ void gameState_update(State *state) {
     draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
   }
 
+  draw_2d_begin();
   {
-    draw_2d_begin();
+    ui_begin();
 
-    Rect r = {0};
-    r.x = 10;
-    r.y = 10;
-    r.w = 101;
-    r.h = 100;
+    {
+      ui_toolbarBegin(uiid_gen());
 
-    draw_rectangle(r, vec4(128.0f, 255.0f, 128.0f, 1.0f));
+      ui_toolbarOption(uiid_gen(), false, TEXTURE_rock);
+      ui_toolbarOption(uiid_gen(), false);
+      ui_toolbarOption(uiid_gen(), false);
+
+      ui_toolbarEnd();
+    }
+
+    ui_end();
+
+    ui_draw();
   }
 }
