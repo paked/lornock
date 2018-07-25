@@ -188,6 +188,19 @@ bool shader_setMatrix(Shader* shader, const char* name, mat4 m) {
   return true;
 }
 
+bool shader_setVec4(Shader* shader, const char* name, vec4 v) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logfln("ERROR: cannot find uniform location %s", name);
+
+    return false;
+  }
+
+  glUniform4f(loc, v.x, v.y, v.z, v.w);
+
+  return true;
+}
+
 bool shader_setVec3(Shader* shader, const char* name, vec3 v) {
   GLint loc = glGetUniformLocation(shader->id, name);
   if (loc == -1) {

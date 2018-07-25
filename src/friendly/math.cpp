@@ -65,3 +65,19 @@ real32 clamp(real32 v, real32 min, real32 max) {
 
   return v;
 }
+
+struct Rect {
+  real32 x, y;
+  real32 w, h;
+};
+
+Rect rect_init(real32 x, real32 y, real32 w, real32 h) {
+  Rect r;
+
+  r.x = x;
+  r.y = y;
+  r.w = w;
+  r.h = h;
+
+  return r;
+}

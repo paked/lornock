@@ -2,6 +2,11 @@
 
 Todo:
 
+- Make time jumps not have to access the disk.
+  - Write ActionChunks into a temporary arena
+  - Then copy back into ActionArena once complete
+  - THEN when the user ACTUALLY wants to access the disk, serialize and dump everything
+- Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - Make billboarding work on a per face basis
 - Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct

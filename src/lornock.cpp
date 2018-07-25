@@ -39,13 +39,13 @@ MemoryArena* tempMemory = 0;
 
 // Real code
 #include <assets.cpp>
-#include <draw.cpp>
 #include <lornock_data.cpp>
+#include <draw.cpp>
 #include <states.cpp>
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set
 // any state, as we want state to persist between hot reloads.
-extern "C" int lornockInit(Platform* p) {
+extern "C" int lornock_init(Platform* p) {
   platform = p;
 
   if (!gladLoadGLLoader(p->glLoadProc)) {
@@ -56,10 +56,18 @@ extern "C" int lornockInit(Platform* p) {
 
   draw_init();
 
+  logln("INFO: Init'd code!");
+
   return 0;
 }
 
-extern "C" void lornockUpdate(LornockMemory* m) {
+extern "C" void lornock_clean(LornockMemory* m) {
+  draw_clean();
+
+  logln("INFO: Cleaned code!");
+}
+
+extern "C" void lornock_update(LornockMemory* m) {
   lornockMemory = m;
   lornockData = (LornockData*) m->permanentStorage;
 

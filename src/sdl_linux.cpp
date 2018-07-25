@@ -128,18 +128,23 @@ bool linux_libReload() {
     return false;
   }
 
-  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(linux_libHandle, "lornockUpdate");
-
+  gameLibUpdateFunction = (GameLibUpdateFunction) dlsym(linux_libHandle, "lornock_update");
   if (!gameLibUpdateFunction) {
     logln("ERROR: Could not find update function");
 
     return false;
   }
 
-  gameLibInitFunction = (GameLibInitFunction) dlsym(linux_libHandle, "lornockInit");
-
+  gameLibInitFunction = (GameLibInitFunction) dlsym(linux_libHandle, "lornock_init");
   if (!gameLibUpdateFunction) {
     logln("ERROR: Could not find init function");
+
+    return false;
+  }
+
+  gameLibCleanFunction = (GameLibCleanFunction) dlsym(linux_libHandle, "lornock_clean");
+  if (!gameLibCleanFunction) {
+    logln("ERROR: Could not find clean function");
 
     return false;
   }

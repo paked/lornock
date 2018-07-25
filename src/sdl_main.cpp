@@ -15,8 +15,12 @@
 
 typedef void (*GameLibUpdateFunction)(LornockMemory*);
 GameLibUpdateFunction gameLibUpdateFunction;
+
 typedef int (*GameLibInitFunction)(Platform*);
 GameLibInitFunction gameLibInitFunction;
+
+typedef void (*GameLibCleanFunction)(LornockMemory*);
+GameLibCleanFunction gameLibCleanFunction;
 
 // Include platform code
 #ifdef __linux__
@@ -228,6 +232,8 @@ int main(int argc, char** argv) {
 
     // TODO(harrison): only reload code in debug mode
     if (LIB_NEEDS_RELOADING_FUNC()) {
+      gameLibCleanFunction(&lornockMemory);
+
       bool ok = LIB_RELOAD_FUNC();
 
       if (!ok) {

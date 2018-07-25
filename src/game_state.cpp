@@ -302,6 +302,7 @@ void gameState_init(State* state) {
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
   assets_requestShader(SHADER_default);
+  assets_requestShader(SHADER_rectangle);
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
   assets_requestTexture(TEXTURE_rock);
@@ -685,5 +686,17 @@ void gameState_update(State *state) {
     model = mat4Translate(model, vec3(0.00f, 1.3f, 0.00f));
 
     draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
+  }
+
+  {
+    draw_2d_begin();
+
+    Rect r = {0};
+    r.x = 10;
+    r.y = 10;
+    r.w = 101;
+    r.h = 100;
+
+    draw_rectangle(r, vec4(128.0f, 255.0f, 128.0f, 1.0f));
   }
 }

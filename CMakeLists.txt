@@ -53,10 +53,8 @@ include_directories(
 set(DATA_FILES
     data/shaders/default.vert
     data/shaders/default.frag
-    data/shaders/billboard.vert
-    data/shaders/billboard.frag
-    data/shaders/color.vert
-    data/shaders/color.frag
+    data/shaders/rectangle.vert
+    data/shaders/rectangle.frag
 
     data/mesh/rock.obj
 
