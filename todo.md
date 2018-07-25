@@ -9,17 +9,19 @@ Todo:
   - Have things on the world which change over time
 - Fix number keys not triggering input events
 - Hot reloading for assets
-- Create a temporary memory pool / arena which can be used to allocate memory which will be cleared after a frame.
-  - Used for loading assets?
-  - Used for getting debug strings
+- Create "assets" memory pool which can dynamically grow, and will release files when they're not needed
+  - Change loadFromFile interface to load file into provided data
+- Remove all references to transient arena, instead access through TempArena
 
 In progress:
-- [ ] Lighting
-  - Add lighting from "sun"
-  - Add small lights for player driven illumination
+- [ ] Create basic UI library
+  - [ ] Render rectangle
+  - [ ] Render icons
+  - [ ] Create toolbar
 - [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
+  - [x] Get windows compiling
   - [ ] Write win32 platform code
 - [ ] Fix the whole billboarding/camera rotation shenangian
   - _HOLY FUCK I'VE SPENT LIKE A WEEK ON THIS SHIT._
@@ -29,7 +31,10 @@ In progress:
   - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Lighting
+  - Add super basic lighting
 - [x] Add OBJ file loader
+- [x] Create a temporary memory pool / arena which can be used to allocate memory which will be cleared after a frame.
 - [x] Fix the weird wrong face bug
 - [x] Refactor TimeBox back into GameState
   - [x] Create a MemoryArena for storing this memory, and an ActionPool struct to put in MemoryBlocks
@@ -70,45 +75,3 @@ Eventually:
 - Focus on splitting "platform layer" from "game" in order to hopefully promote clean code
 - Use HandmadeMath and GLAD
 - Fast iteration with low compile time
-
-## Brain Dump For Tomorrow
-
-1. Probably should look into writing some sort of allocator so it is easier to access the TransientStorage
-2. I AM GOING TO REWRITE THE READING OF ACTIONS SO THAT IT READS STRAIGHT FROM THE FILE MEMORY BUFFER AND PARSES EACH ACTION AT RUNTIME. IT IS NOT SUPER EFFICIENT BUT IT IS THE EASIEST WAY TO START.
-3. Each time the player jumps backwards or forwards in time THEY SHOULD WRITE THEIR PENDING ACTIONS.
-
-## Example code:
-
-```cpp
-// On every rotation
-if (g->rotState == ROT_FORWARD) {
-  g->playerPitch = g->playerPitch * quatFromPitchYawRoll(-90.0f, 0, 0);
-  g->playerPitch = quatNormalize(g->playerPitch);
-} else if (g->rotState == ROT_BACKWARD) {
-  g->playerPitch = g->playerPitch * quatFromPitchYawRoll(90.0f, 0, 0);
-  g->playerPitch = quatNormalize(g->playerPitch);
-} else if (g->rotState == ROT_LEFT) {
-  g->playerRoll = g->playerRoll * quatFromPitchYawRoll(0, 0, 90.0f);
-  g->playerRoll = quatNormalize(g->playerRoll);
-} else if (g->rotState == ROT_RIGHT) {
-  g->playerRoll = g->playerRoll * quatFromPitchYawRoll(0, 0, -90.0f);
-  g->playerRoll = quatNormalize(g->playerRoll);
-}
-
-...
-
-// On update
-quat playerOffset = quatFromPitchYawRoll(90, 0, 0); // We start on the front face, so player needs to be at 90 degrees
-playerOffset = playerOffset * (g->playerYaw * g->playerPitch * g->playerRoll);
-
-vec3 pivot = vec3(0, -0.5f, 0.0);
-
-mat4 model = mat4d(1.0f);
-model = mat4Translate(model, pivot);
-model = mat4Translate(model, g->playerPosition + vec3(0.0f, 0.5f, 0.0));
-model = model * quatToMat4(playerOffset);
-model = mat4Scale(model, vec3(g->playerSize.x, g->playerSize.y, 1));
-model = mat4Translate(model, pivot * -1);
-
-// Draw w/ shader, etc.
-```
