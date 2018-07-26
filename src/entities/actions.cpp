@@ -95,8 +95,6 @@ void action_print(Action a) {
 void action_serialize(Action a, char* out) {
   char line[256] = {0};
 
-  action_print(a);
-
   switch (a.type) {
     case MOVE:
       {
@@ -277,9 +275,6 @@ void timeBox_init(TimeBox* tb) {
 }
 
 void timeBox_load(TimeBox* tb, TimeIndex* index, MemoryArena* ma, const char* name) {
-  char infoFname[128];
-  snprintf(infoFname, 128, "data/saves/%s.info", name);
-
   char saveFilename[128];
   snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
 
@@ -288,7 +283,6 @@ void timeBox_load(TimeBox* tb, TimeIndex* index, MemoryArena* ma, const char* na
 
   loadFromFile(saveFilename, &rawData, &rawLen);
 
-  // TODO(harrison): custom assert
   assert(rawLen > 0);
 
   uint32 rawUpTo = 0;
@@ -320,23 +314,6 @@ void timeBox_load(TimeBox* tb, TimeIndex* index, MemoryArena* ma, const char* na
       chunk->count = 0;
     }
   }
-
-  uint32 infoLen;
-  void* infoData;
-
-  loadFromFile(infoFname, &infoData, &infoLen);
-
-  assert(infoLen > 0);
-
-  int64 time;
-  uint64 sequence;
-  uint64 jumpID;
-
-  sscanf((char*) infoData, "%ld %lu %lu", &time, &sequence, &jumpID);
-
-  index->time = index->timeDoneTo = time;
-  index->sequence = sequence;
-  index->jumpID = jumpID;
 }
 
 void timeBox_save(TimeBox* tb, TimeIndex worldIndex, MemoryArena* ma) {
@@ -369,20 +346,12 @@ void timeBox_save(TimeBox* tb, TimeIndex worldIndex, MemoryArena* ma) {
 
   Action a;
   while (timeBox_nextAction(tb, ma, &index, &a)) {
-    logln("cleaning up");
-
     action_serialize(a, out);
   }
 
   tb->toWrite.count = 0;
 
   writeToFile("data/saves/simple.timeline", (void*) out, strlen(out));
-
-  char info[128];
-
-  snprintf(info, 128, "%ld %lu %lu", worldIndex.time, worldIndex.sequence, worldIndex.jumpID);
-
-  writeToFile("data/saves/simple.info", info, strlen(info));
 }
 
 void timeBox_add(TimeBox* tb, TimeIndex* index, MemoryArena* ma, Action a) {
@@ -485,4 +454,30 @@ bool timeBox_nextAction(TimeBox* tb, MemoryArena* ma, TimeIndex* index, Action *
   }
 
   return false;
+}
+
+bool timeBox_findLastAction(TimeBox* tb, MemoryArena* ma, Action* a) {
+  bool found = false;
+
+  uint64 seq = 0;
+  Action latest = {0};
+
+  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+    ActionChunk* ac = (ActionChunk*) block->start;
+
+    for (uint64 i = 0; i < ac->count; i++) {
+      Action t = ac->actions[i];
+
+      if (t.common.sequence > seq) {
+        seq = t.common.sequence;
+
+        latest = t;
+        found = true;
+      }
+    }
+  }
+
+  *a = latest;
+
+  return found;
 }

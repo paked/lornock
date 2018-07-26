@@ -353,13 +353,18 @@ void gameState_init(State* state) {
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
-  gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
-
   {
     Action a = { 0 };
-    bool found = false;
-    uint64 current = g->timeIndex.sequence;
 
+    assert(timeBox_findLastAction(&g->timeBox, &lornockData->actionsArena, &a));
+
+    g->timeIndex.time = g->timeIndex.timeDoneTo = a.common.time;
+    g->timeIndex.sequence = a.common.sequence;
+    g->timeIndex.jumpID = a.common.jumpID;
+
+    uint64 current = a.common.sequence;
+
+    bool found = true;
     while (timeBox_actionInSequence(&g->timeBox, &lornockData->actionsArena, current, &a)) {
       if (a.common.type == MOVE || a.common.type == SPAWN) {
         found = true;
@@ -382,6 +387,8 @@ void gameState_init(State* state) {
       logln("ERROR: COULD NOT FIND THE LAST ACTION, AND AM SUBSEQUENTLY UNABLET O SET THE POSITION OF THE PLAYER PROPERLY.");
     }
   }
+
+  gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -765,6 +772,7 @@ void gameState_update(State *state) {
 
     ui_end();
 
-    ui_draw();
   }
+
+  ui_draw();
 }
