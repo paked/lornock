@@ -13,6 +13,9 @@ typedef hmm_quaternion quat;
 
 #define quatNormalize(q) HMM_NormalizeQuaternion(q)
 #define quatToMat4(q) HMM_QuaternionToMat4(q)
+// to be consistent with the mat4Rotate func
+#define quatFromAngleAxis(angle, axis) HMM_QuaternionFromAxisAngle(axis, deg2Rad(angle))
+#define quatFromAngleAxisRad(angle, axis) HMM_QuaternionFromAxisAngle(axis, angle)
 #define quatFromAxisAngle(axis, angle) HMM_QuaternionFromAxisAngle(axis, angle)
 #define quatSlerp(l, t, r) HMM_Slerp(l, t, r)
 

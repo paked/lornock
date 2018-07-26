@@ -73,6 +73,17 @@ vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
   { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }  // Top face
 };
 
+quat faceRotations[MAX_FACE] = {
+  quatFromAngleAxis(270.0f, vec3_right), // Front
+  quatFromAngleAxis(90.0f, vec3_right), // Back
+
+  quatFromAngleAxis(270.0f, vec3_forward), // Left
+  quatFromAngleAxis(90.0f, vec3_forward), // Right
+
+  quatFromAngleAxis(180.0f, vec3_right), // Bottom
+  quatFromAngleAxis(0.0f, vec3_right), // Top
+};
+
 #define WORLD_WIDTH 3
 #define WORLD_HEIGHT 3
 #define WORLD_DEPTH 3
@@ -151,6 +162,13 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
 #define CAMERA_POSITION (vec3(0, 0.0f, -7.25f))
 #define MAX_PAST_PLAYERS 10
 #define ROTATION_DURATION 400
+#define PLAYER_INVENTORY_SIZE 9
+
+enum {
+  BLOCK_NONE,
+  BLOCK_ROCK,
+  BLOCK_COAL
+};
 
 struct GameState {
   vec3 faceRight;
@@ -177,6 +195,8 @@ struct GameState {
   TimeIndex timeIndex;
   uint64 timeBoxNextTickTime;
   TimeBox timeBox;
+
+  uint8 environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   Mesh worldMesh;
@@ -256,6 +276,20 @@ void gameState_init(State* state) {
   timeBox_load(&g->timeBox, &g->timeIndex, &lornockData->actionsArena, "simple");
   g->timeBoxNextTickTime = 0;
 
+  for (int face = 0; face < MAX_FACE; face++) {
+    for (int y = 0; y < WORLD_HEIGHT; y++) {
+      for (int x = 0; x < WORLD_WIDTH; x++) {
+        uint32 block = BLOCK_NONE;
+
+        if (y == x) {
+          block = BLOCK_COAL;
+        }
+
+        g->environment[face][y][x] = block;
+      }
+    }
+  }
+
   for (int y = 0; y < WORLD_HEIGHT; y++) {
     for (int z = 0; z < WORLD_DEPTH; z++) {
       for (int x = 0; x < WORLD_WIDTH; x++) {
@@ -308,7 +342,13 @@ void gameState_init(State* state) {
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
   assets_requestTexture(TEXTURE_rock);
+
+  assets_requestTexture(TEXTURE_rock_icon);
   assets_requestTexture(TEXTURE_rock_albedo);
+
+  assets_requestTexture(TEXTURE_coal_icon);
+  assets_requestTexture(TEXTURE_coal_albedo);
+
   assets_requestModel(MODEL_rock);
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
@@ -679,15 +719,34 @@ void gameState_update(State *state) {
     }
   }
 
+  // Draw items
   {
     draw_setShader(shader(SHADER_default));
     shader_setVec3(&draw.activeShader, "lightColor", lightColor);
     shader_setVec3(&draw.activeShader, "lightPos", lightPos);
 
-    mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, vec3(0.00f, 1.3f, 0.00f));
+    vec3 worldOffset = vec3(-1.5f, 1.3, -1.5f);
+    vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
 
-    draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
+    for (int f = 0; f < MAX_FACE; f++) {
+      mat4 face = quatToMat4(faceRotations[f]);
+
+      for (int y = 0; y < WORLD_HEIGHT; y++) {
+        for (int x = 0; x < WORLD_WIDTH; x++) {
+          uint32 type = g->environment[f][y][x];
+          if (type == BLOCK_NONE) {
+            continue;
+          }
+
+          mat4 model = mat4d(1.0f);
+          model = mat4Translate(model, worldOffset + modelOffset);
+          model = mat4Translate(model, vec3(x, 0, y));
+          model = face * model;
+
+          draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
+        }
+      }
+    }
   }
 
   draw_2d_begin();
@@ -697,7 +756,7 @@ void gameState_update(State *state) {
     {
       ui_toolbarBegin(uiid_gen());
 
-      ui_toolbarOption(uiid_gen(), false, TEXTURE_rock);
+      ui_toolbarOption(uiid_gen(), false, TEXTURE_rock_icon);
       ui_toolbarOption(uiid_gen(), false);
       ui_toolbarOption(uiid_gen(), false);
 

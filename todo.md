@@ -17,12 +17,18 @@ Todo:
 - Create "assets" memory pool which can dynamically grow, and will release files when they're not needed
   - Change loadFromFile interface to load file into provided data
 - Remove all references to transient arena, instead access through TempArena
+- Serialize camera position in save-file
+- FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 
 In progress:
+- [ ] Add items to the world which can be picked up and placed in inventory
+  - [ ] Find some way to save these in the world file?
 - [ ] Create basic UI library
-  - [ ] Render rectangle
-  - [ ] Render icons
-  - [ ] Create toolbar
+  - [x] Render rectangle
+  - [x] Render icons
+  - [x] Create toolbar
+  - [ ] Render text
+  - [ ] Create UI for time jump
 - [ ] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
