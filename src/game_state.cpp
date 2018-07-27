@@ -1,4 +1,5 @@
 #include <entities/actions.cpp>
+#include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
 // Voxel direction/faces
@@ -193,8 +194,8 @@ struct GameState {
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
   TimeIndex timeIndex;
-  uint64 timeBoxNextTickTime;
-  TimeBox timeBox;
+  uint64 timelineNextTickTime;
+  Timeline timeline;
 
   uint8 environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
 
@@ -218,7 +219,7 @@ uint32 gameState_getCurrentFace(GameState *g) {
   return -1;
 }
 
-void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma);
+void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex, MemoryArena *ma);
 
 void gameState_setFaceDirections(GameState* g) {
   mat4 view = mat4d(1);
@@ -273,8 +274,8 @@ void gameState_init(State* state) {
 
   gameState_disableAllPastPlayers(g);
 
-  timeBox_load(&g->timeBox, &g->timeIndex, &lornockData->actionsArena, "simple");
-  g->timeBoxNextTickTime = 0;
+  timeline_load(&g->timeline, &lornockData->actionsArena, "simple");
+  g->timelineNextTickTime = 0;
 
   for (int face = 0; face < MAX_FACE; face++) {
     for (int y = 0; y < WORLD_HEIGHT; y++) {
@@ -356,7 +357,9 @@ void gameState_init(State* state) {
   {
     Action a = { 0 };
 
-    assert(timeBox_findLastAction(&g->timeBox, &lornockData->actionsArena, &a));
+    assert(timeline_findLastAction(&g->timeline, &lornockData->actionsArena, &a));
+
+    action_print(a);
 
     g->timeIndex.time = g->timeIndex.timeDoneTo = a.common.time;
     g->timeIndex.sequence = a.common.sequence;
@@ -365,7 +368,7 @@ void gameState_init(State* state) {
     uint64 current = a.common.sequence;
 
     bool found = true;
-    while (timeBox_actionInSequence(&g->timeBox, &lornockData->actionsArena, current, &a)) {
+    while (timeline_actionInSequence(&g->timeline, &lornockData->actionsArena, current, &a)) {
       if (a.common.type == MOVE || a.common.type == SPAWN) {
         found = true;
 
@@ -388,7 +391,7 @@ void gameState_init(State* state) {
     }
   }
 
-  gameState_spawnNecessaryPastPlayers(g, &g->timeBox, &g->timeIndex, &lornockData->actionsArena);
+  gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex, &lornockData->actionsArena);
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -464,14 +467,14 @@ void gameState_rotate(GameState* g, uint32 direction) {
   g->rotatingRollEnd = 0.0f;
 }
 
-void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* worldIndex, MemoryArena *ma) {
+void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex, MemoryArena *ma) {
   gameState_disableAllPastPlayers(g);
 
   TimeIndex index = *worldIndex;
   index.timeDoneTo = -1;
 
   Action spawnAction;
-  while (timeBox_nextAction(tb, ma, &index, &spawnAction)) {
+  while (timeline_nextAction(tb, ma, &index, &spawnAction)) {
     if (spawnAction.type != SPAWN || spawnAction.common.jumpID == index.jumpID) {
       continue;
     }
@@ -481,7 +484,7 @@ void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* w
     Action lastMove = spawnAction;
     Action jumpAction;
     uint64 seq = spawnAction.common.sequence + 1;
-    while (timeBox_actionInSequence(tb, ma, seq, &jumpAction)) {
+    while (timeline_actionInSequence(tb, ma, seq, &jumpAction)) {
       seq += 1;
 
       if (jumpAction.type == MOVE) {
@@ -514,35 +517,33 @@ void gameState_spawnNecessaryPastPlayers(GameState *g, TimeBox* tb, TimeIndex* w
 }
 
 void gameState_timeJump(GameState *g, int64 destination) {
-  TimeBox* tb = &g->timeBox;
+  Timeline* tb = &g->timeline;
   TimeIndex* index = &g->timeIndex;
   MemoryArena* ma = &lornockData->actionsArena;
 
-  timeBox_add(tb, index, ma, action_makeJump(destination));
+  timeline_add(tb, index, ma, action_makeJump(destination));
   index->jumpID += 1;
 
-  timeBox_save(tb, *index, ma);
-  timeBox_load(tb, index, ma, "simple");
+  timeline_commit(tb, ma);
 
   // TODO(harrison): what happens if the save or load fails?
 
   index->time = index->timeDoneTo = destination;
 
-  timeBox_add(tb, index, ma, action_makeSpawn(g->playerPos));
-  timeBox_save(tb, *index, ma);
+  timeline_add(tb, index, ma, action_makeSpawn(g->playerPos));
 
   gameState_spawnNecessaryPastPlayers(g, tb, index, ma);
 }
 
 void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
-  TimeBox* tb = &g->timeBox;
+  Timeline* tb = &g->timeline;
 
-  if (getTime() > g->timeBoxNextTickTime) {
-    g->timeBoxNextTickTime = getTime() + TIME_BOX_TICK_MS_INTERVAL;
+  if (getTime() > g->timelineNextTickTime) {
+    g->timelineNextTickTime = getTime() + TIMELINE_TICK_MS_INTERVAL;
 
     Action a;
-    while (timeBox_nextAction(tb, &lornockData->actionsArena, &g->timeIndex, &a)) {
+    while (timeline_nextAction(tb, &lornockData->actionsArena, &g->timeIndex, &a)) {
       switch (a.type) {
         case SPAWN:
           {
@@ -581,7 +582,7 @@ void gameState_update(State *state) {
 
   if (keyJustDown(KEY_l)) {
     logln("saving!");
-    timeBox_save(tb, g->timeIndex, &lornockData->actionsArena);
+    timeline_save(tb, g->timeIndex, &lornockData->actionsArena);
   }
 
   if (g->rotating) {
@@ -628,7 +629,7 @@ void gameState_update(State *state) {
     g->playerPos += move * dt * speed;
 
     if (!vec3AlmostEqual(move, g->playerLastMove)) {
-      timeBox_add(tb, &g->timeIndex, &lornockData->actionsArena, action_makeMove(g->playerPos));
+      timeline_add(tb, &g->timeIndex, &lornockData->actionsArena, action_makeMove(g->playerPos));
 
       g->playerLastMove = move;
     }

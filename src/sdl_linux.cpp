@@ -47,7 +47,7 @@ void linux_loadFromFile(const char* path, void** data, uint32* len) {
 void linux_writeToFile(const char* path, void* data, int64 len) {
   /*logfln("writing to file %s. contents:\n%s", path, data);*/
 
-  int fd = open(path, O_RDWR | O_CREAT);
+  int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd == -1) {
     logfln("ERROR: unable to open file. fd: %d", fd);
   }

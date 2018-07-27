@@ -2,10 +2,6 @@
 
 Todo:
 
-- Make time jumps not have to access the disk.
-  - Write ActionChunks into a temporary arena
-  - Then copy back into ActionArena once complete
-  - THEN when the user ACTUALLY wants to access the disk, serialize and dump everything
 - Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - Make billboarding work on a per face basis
 - Save rotation and current face in camera state (maybe write a proper meta file)
@@ -19,6 +15,7 @@ Todo:
 - Remove all references to transient arena, instead access through TempArena
 - Serialize camera position in save-file
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
+- Store a MemoryArena inside a `Timeline` struct
 
 In progress:
 - [ ] Add items to the world which can be picked up and placed in inventory
@@ -42,6 +39,10 @@ In progress:
   - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Make time jumps not have to access the disk.
+  - Write ActionChunks into a temporary arena
+  - Then copy back into ActionArena once complete
+  - THEN when the user ACTUALLY wants to access the disk, serialize and dump everything
 - [x] Lighting
   - Add super basic lighting
 - [x] Add OBJ file loader
@@ -59,9 +60,9 @@ Done:
   - [x] Play basic timeline file
   - [x] Write basic timeline file
   - [x] Have timelines be both playing back and written (ie. bring back to feature parity with original codebase)
+- [x] SWITCH TO `-Wall -Werror`
 
 Dev tooling:
-- SWITCH TO `-Wall -Werror`
 - Create `dev.sh` (and `dev.bat`) environment with `edit`, `build`, and `run` macros
 - Create script which will list all TODOs and FIXMEs
 

@@ -14,9 +14,9 @@ struct PastPlayer {
   uint32 duration;
 };
 
-void pastPlayer_setupNextMove(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma);
+void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma);
 
-void pastPlayer_init(PastPlayer* pp, TimeBox *tb, TimeIndex* worldIndex, MemoryArena* ma, Action first) {
+void pastPlayer_init(PastPlayer* pp, Timeline *tb, TimeIndex* worldIndex, MemoryArena* ma, Action first) {
   pp->exists = true;
   pp->moving = true;
 
@@ -43,13 +43,13 @@ void pastPlayer_init(PastPlayer* pp, TimeBox *tb, TimeIndex* worldIndex, MemoryA
   pastPlayer_setupNextMove(pp, tb, worldIndex, ma);
 }
 
-void pastPlayer_update(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+void pastPlayer_update(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma) {
   if (!pp->exists) {
     return;
   }
 
   Action a;
-  while (timeBox_nextActionInSequence(tb, ma, pp->sequence, &a) && a.common.time < worldIndex->time) {
+  while (timeline_nextActionInSequence(tb, ma, pp->sequence, &a) && a.common.time < worldIndex->time) {
     pp->sequence = a.common.sequence;
 
     switch (a.type) {
@@ -83,12 +83,12 @@ void pastPlayer_update(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, Memor
   pp->pos = vec3Lerp(pc, pp->start, pp->destination);
 }
 
-void pastPlayer_setupNextMove(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma) {
   Action next = { 0 };
   uint64 current = pp->sequence;
 
   while (next.common.type != MOVE) {
-    if (!timeBox_nextActionInSequence(tb, ma, current, &next)) {
+    if (!timeline_nextActionInSequence(tb, ma, current, &next)) {
       pp->moving = false;
 
       break;
@@ -101,10 +101,8 @@ void pastPlayer_setupNextMove(PastPlayer* pp, TimeBox* tb, TimeIndex* worldIndex
     return;
   }
 
-  action_print(next);
-
   pp->start = pp->pos;
   pp->destination = next.move.pos;
   pp->startTime = getTime();
-  pp->duration = (real32) TIME_BOX_TICK_MS_INTERVAL * (real32)((next.common.time + 1) - pp->lastTime);
+  pp->duration = (real32) TIMELINE_TICK_MS_INTERVAL * (real32)((next.common.time + 1) - pp->lastTime);
 }

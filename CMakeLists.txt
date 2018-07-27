@@ -76,12 +76,6 @@ foreach(DATA_FILE ${DATA_FILES})
     configure_file(${DATA_IN} ${DATA_OUT} COPYONLY)
 endforeach(DATA_FILE)
 
-add_custom_command(TARGET lornock PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/data/saves" "${CMAKE_BINARY_DIR}/data/saves"
-    COMMENT "copying over saves"
-    VERBATIM)
-
 # Runs if building for a native platform (currently only Linux)
 if ((WIN32 OR (UNIX AND NOT APPLE)) AND NOT EMSCRIPTEN)
     # TODO(harrison): figure out exactly what this is for...
