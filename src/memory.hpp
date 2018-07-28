@@ -3,6 +3,8 @@
 struct MemoryBlock {
   uint8* base;
   uint8* start;
+
+  MemoryIndex used;
   MemoryIndex size;
   MemoryBlock* next;
 };
@@ -26,6 +28,19 @@ void memoryArena_clear(MemoryArena* ma) {
   memset(ma->base, 0, ma->size);
 
   ma->first = 0;
+}
+
+MemoryBlock* memoryArena_getLastBlock(MemoryArena* ma) {
+  MemoryBlock* last = 0;
+
+  MemoryBlock* i = ma->first;
+  while (i != 0) {
+    last = i;
+
+    i = i->next;
+  }
+
+  return last;
 }
 
 #define memoryArena_pushStruct(arena, Type) ( (Type *)memoryArena_pushSize(arena, sizeof(Type)) )
@@ -61,6 +76,7 @@ void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {
   block->start = end + sizeof(MemoryBlock);
   block->size = blockSize;
   block->next = 0;
+  block->used = 0;
 
   if (ma->first == 0) {
     ma->first = block;

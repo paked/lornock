@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <assert.h>
 
 // TODO: come up with a nicer name for dbg_assert
 #define dbg_assert(b) if (!(b)) { logfln("ASSERT FAILED: \"%s\" at \"%d\" \"%s\"", #b, __LINE__, __FILE__); }
@@ -27,6 +28,8 @@ typedef double    real64;
 typedef int32     bool32;
 
 typedef size_t MemoryIndex;
+
+#include <memory.hpp>
 
 // TODO(harrison): Add in rest of keys!
 enum {
@@ -83,7 +86,9 @@ struct LornockMemory {
 
 typedef void* (* OpenGLLoadProcFunc)(const char *name);
 typedef void (* LoadFromFileFunc)(const char *path, void** data, uint32* len);
+typedef void (* LoadFromFileAsArenaFunc)(const char *path, MemoryArena* ma);
 typedef void (* WriteToFileFunc)(const char *path, void* data, int64 len);
+typedef void (* WriteArenaToFileFunc)(const char *path, MemoryArena* ma);
 
 struct Platform {
   int fps;
@@ -93,8 +98,10 @@ struct Platform {
   bool keyStateNow[MAX_KEY];
   bool keyStateLast[MAX_KEY];
 
-  WriteToFileFunc writeToFile;
   LoadFromFileFunc loadFromFile;
+  LoadFromFileAsArenaFunc loadFromFileAsArena;
+  WriteToFileFunc writeToFile;
+  WriteArenaToFileFunc writeArenaToFile;
   OpenGLLoadProcFunc glLoadProc;
 
   uint32 windowWidth;

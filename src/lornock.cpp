@@ -23,13 +23,11 @@
 
 Platform* platform = 0;
 LornockMemory* lornockMemory = 0;
+MemoryArena* tempMemory = 0;
 
 //
 // Lornock code
 //
-#include <memory.hpp>
-
-MemoryArena* tempMemory = 0;
 
 // Utilities
 #include <hmm_wrapper.cpp>
@@ -38,6 +36,7 @@ MemoryArena* tempMemory = 0;
 #include <globals.cpp>
 
 // Real code
+#include <serializer.cpp>
 #include <assets.cpp>
 #include <lornock_data.cpp>
 #include <draw.cpp>
@@ -92,14 +91,62 @@ extern "C" void lornock_update(LornockMemory* m) {
         arenaSize,
         head);
 
+    {
+      Serializer s;
+      serializer_init(&s, SERIALIZER_MODE_WRITE, lornockData->tempArena);
+
+      real32 t = 12.5f;
+      serializer_real32(&s, &t);
+
+      for (uint8 i = 20; i > 0; i--) {
+        serializer_uint8(&s, &i);
+      }
+
+      writeArenaToFile("out", &s.buffer);
+    }
+
+    {
+
+      MemoryArena arena;
+
+      loadFromFileAsArena("out", &arena);
+
+      Serializer s;
+      serializer_init(&s, SERIALIZER_MODE_READ, arena);
+
+      real32 res;
+
+      serializer_real32(&s, &res);
+
+      logfln("got: %f", res);
+
+      {
+        uint8 result = 0;
+
+        for (uint8 i = 20; i > 0; i--) {
+          serializer_uint8(&s, &result);
+
+          logfln("result %u", result);
+        }
+      }
+
+      /*
+      {
+        real32 result = 0;
+
+        for (int i = 0; i < 5; i++) {
+          serializer_real32(&s, &result);
+
+          logfln("result: %f", result);
+        }
+      }*/
+    }
+
     stbi_set_flip_vertically_on_load(true);
 
     draw_init();
 
     state_init(&lornockData->state, STATE_game);
-
-    // Refresh assets
-    lornockData_assetsUpdate();
 
     m->initialized = true;
   }

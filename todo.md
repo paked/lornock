@@ -15,7 +15,7 @@ Todo:
 - Remove all references to transient arena, instead access through TempArena
 - Serialize camera position in save-file
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
-- Store a MemoryArena inside a `Timeline` struct
+- Store a MemoryArena inside a `Timeline` struct, and actually use it
 
 In progress:
 - [ ] Add items to the world which can be picked up and placed in inventory

@@ -8,10 +8,10 @@
 // Include external libraries
 #include <SDL.h>
 
-// Include internal libraries
-
 // Include common
 #include <platform_common.hpp>
+
+// Include internal libraries
 
 typedef void (*GameLibUpdateFunction)(LornockMemory*);
 GameLibUpdateFunction gameLibUpdateFunction;
@@ -64,6 +64,50 @@ SDL_GLContext glContext;
 
 LornockMemory lornockMemory = {0};
 Platform platform = {0};
+
+void loadFromFileAsArena(const char* path, MemoryArena* ma) {
+  void* data;
+  uint32 len;
+
+  LOAD_FROM_FILE_FUNC(path, &data, &len);
+
+  assert(len != 0);
+
+  MemoryIndex arenaSize = len + sizeof(MemoryBlock) + 1;
+  uint8* arenaBuffer = (uint8*) ALLOCATE_MEMORY_FUNC(arenaSize);
+
+  memoryArena_init(ma, arenaSize, arenaBuffer);
+
+  void* start = memoryArena_pushSize(ma, (MemoryIndex) len);
+
+  memcpy(start, data, len);
+
+  // TODO(harrison): free `data`
+}
+
+void writeArenaToFile(const char* path, MemoryArena* ma) {
+  MemoryIndex totalSize = 0;
+
+  {
+    for (MemoryBlock* block = ma->first; block != 0; block = block->next) {
+      totalSize += block->size - sizeof(MemoryBlock);
+    }
+  }
+
+  MemoryIndex index = 0;
+  uint8* mem = (uint8*) ALLOCATE_MEMORY_FUNC(totalSize);
+
+  for (MemoryBlock* block = ma->first; block != 0; block = block->next) {
+    MemoryIndex size = block->size - sizeof(MemoryBlock);
+    memcpy(mem + index, block->start, size);
+
+    index += size;
+  }
+
+  WRITE_TO_FILE_FUNC(path, mem, index);
+
+  munmap(mem, totalSize);
+}
 
 void toggleFullscreen() {
   if (SDL_SetWindowFullscreen(window, platform.fullscreen ? 0 : SDL_WINDOW_FULLSCREEN) != 0) {
@@ -144,7 +188,9 @@ int main(int argc, char** argv) {
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
   platform.loadFromFile = LOAD_FROM_FILE_FUNC;
+  platform.loadFromFileAsArena = loadFromFileAsArena;
   platform.writeToFile = WRITE_TO_FILE_FUNC;
+  platform.writeArenaToFile = writeArenaToFile;
   platform.windowWidth = WINDOW_WIDTH;
   platform.windowHeight = WINDOW_HEIGHT;
   platform.time = 0;

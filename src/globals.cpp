@@ -4,7 +4,9 @@
 #define getWindowHeight() (platform->windowHeight)
 
 #define loadFromFile(p, d, l) platform->loadFromFile(p, d, l)
+#define loadFromFileAsArena(p, a) platform->loadFromFileAsArena(p, a)
 #define writeToFile(p, d, l) platform->writeToFile(p, d, l)
+#define writeArenaToFile(p, a) platform->writeArenaToFile(p, a);
 
 #define keyJustDown(k) (platform->keyStateNow[k] && !platform->keyStateLast[k])
 #define keyJustUp(k) (!platform->keyStateNow[k] && platform->keyStateLast[k])
