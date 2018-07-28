@@ -91,57 +91,6 @@ extern "C" void lornock_update(LornockMemory* m) {
         arenaSize,
         head);
 
-    {
-      Serializer s;
-      serializer_init(&s, SERIALIZER_MODE_WRITE, lornockData->tempArena);
-
-      real32 t = 12.5f;
-      serializer_real32(&s, &t);
-
-      for (uint8 i = 20; i > 0; i--) {
-        serializer_uint8(&s, &i);
-      }
-
-      writeArenaToFile("out", &s.buffer);
-    }
-
-    {
-
-      MemoryArena arena;
-
-      loadFromFileAsArena("out", &arena);
-
-      Serializer s;
-      serializer_init(&s, SERIALIZER_MODE_READ, arena);
-
-      real32 res;
-
-      serializer_real32(&s, &res);
-
-      logfln("got: %f", res);
-
-      {
-        uint8 result = 0;
-
-        for (uint8 i = 20; i > 0; i--) {
-          serializer_uint8(&s, &result);
-
-          logfln("result %u", result);
-        }
-      }
-
-      /*
-      {
-        real32 result = 0;
-
-        for (int i = 0; i < 5; i++) {
-          serializer_real32(&s, &result);
-
-          logfln("result: %f", result);
-        }
-      }*/
-    }
-
     stbi_set_flip_vertically_on_load(true);
 
     draw_init();

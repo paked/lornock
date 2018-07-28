@@ -7,6 +7,7 @@
 
 // Include external libraries
 #include <SDL.h>
+#include <time.h>
 
 // Include common
 #include <platform_common.hpp>
@@ -138,6 +139,8 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
 }
 
 int main(int argc, char** argv) {
+  srand(time(NULL));
+
   if(SDL_Init(SDL_INIT_VIDEO) < 0) {
     logln("ERROR: Could not init SDL video");
 

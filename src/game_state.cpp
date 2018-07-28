@@ -1,6 +1,6 @@
-#include <entities/actions.cpp>
-#include <entities/timeline.cpp>
-#include <entities/past_player.cpp>
+#define WORLD_WIDTH 3
+#define WORLD_HEIGHT 3
+#define WORLD_DEPTH 3
 
 // Voxel direction/faces
 enum {
@@ -12,6 +12,10 @@ enum {
   TOP,
   MAX_FACE
 };
+
+#include <entities/actions.cpp>
+#include <entities/timeline.cpp>
+#include <entities/past_player.cpp>
 
 void printFace(uint32 f) {
   switch(f) {
@@ -84,10 +88,6 @@ quat faceRotations[MAX_FACE] = {
   quatFromAngleAxis(180.0f, vec3_right), // Bottom
   quatFromAngleAxis(0.0f, vec3_right), // Top
 };
-
-#define WORLD_WIDTH 3
-#define WORLD_HEIGHT 3
-#define WORLD_DEPTH 3
 
 bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
   int offsetX = 0;
@@ -197,8 +197,6 @@ struct GameState {
   uint64 timelineNextTickTime;
   Timeline timeline;
 
-  uint8 environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
-
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   Mesh worldMesh;
 
@@ -276,20 +274,6 @@ void gameState_init(State* state) {
 
   timeline_load(&g->timeline, &lornockData->actionsArena, "simple");
   g->timelineNextTickTime = 0;
-
-  for (int face = 0; face < MAX_FACE; face++) {
-    for (int y = 0; y < WORLD_HEIGHT; y++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
-        uint32 block = BLOCK_NONE;
-
-        if (y == x) {
-          block = BLOCK_COAL;
-        }
-
-        g->environment[face][y][x] = block;
-      }
-    }
-  }
 
   for (int y = 0; y < WORLD_HEIGHT; y++) {
     for (int z = 0; z < WORLD_DEPTH; z++) {
@@ -526,8 +510,6 @@ void gameState_timeJump(GameState *g, int64 destination) {
 
   timeline_commit(tb, ma);
 
-  // TODO(harrison): what happens if the save or load fails?
-
   index->time = index->timeDoneTo = destination;
 
   timeline_add(tb, index, ma, action_makeSpawn(g->playerPos));
@@ -741,7 +723,7 @@ void gameState_update(State *state) {
 
       for (int y = 0; y < WORLD_HEIGHT; y++) {
         for (int x = 0; x < WORLD_WIDTH; x++) {
-          uint32 type = g->environment[f][y][x];
+          uint32 type = g->timeline.info.initialState[f][y][x];
           if (type == BLOCK_NONE) {
             continue;
           }

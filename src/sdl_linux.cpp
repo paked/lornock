@@ -19,7 +19,7 @@ void linux_loadFromFile(const char* path, void** data, uint32* len) {
   struct stat attr;
 
   if (stat(path, &attr) != 0) {
-    logfln("ERROR: failed to find file: %s", path);
+    logfln("ERROR: (loading) failed to find file: %s", path);
     return;
   }
 
@@ -27,7 +27,7 @@ void linux_loadFromFile(const char* path, void** data, uint32* len) {
 
   int fd = open(path, O_RDONLY);
   if (fd == -1) {
-    logfln("ERROR: unable to open file. fd: %d", fd);
+    logfln("ERROR: (loading) unable to open file. fd: %d", fd);
   }
 
   void* readData = mmap(0, readSizeExpected, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -35,7 +35,7 @@ void linux_loadFromFile(const char* path, void** data, uint32* len) {
   int64 readSizeGot = read(fd, readData, readSizeExpected);
 
   if (readSizeGot != readSizeExpected) {
-    logfln("ERROR: could not read file (wanted: %zd read: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
+    logfln("ERROR: (loading) could not read file (wanted: %zd read: %zd) (errno: %d)!", readSizeExpected, readSizeGot, errno);
   }
 
   *data = readData;
@@ -49,13 +49,13 @@ void linux_writeToFile(const char* path, void* data, int64 len) {
 
   int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd == -1) {
-    logfln("ERROR: unable to open file. fd: %d", fd);
+    logfln("ERROR: (writing) unable to open file. fd: %d", fd);
   }
 
   int64 writeSizeGot = write(fd, data, len);
 
   if (writeSizeGot != len) {
-    logfln("ERROR: could not write file (wanted: %zd read: %zd) (errno: %d)!", len, writeSizeGot, errno);
+    logfln("ERROR: (writing) could not write file (wanted: %zd read: %zd) (errno: %d)!", len, writeSizeGot, errno);
   }
 
   logln("Wrote file!");

@@ -20,7 +20,28 @@ void timeIndex_init(TimeIndex* index) {
   index->point = 0;
 }
 
+typedef uint8 Environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
+
+struct TimelineInfo {
+  Environment initialState;
+};
+
+void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
+  // Serialize environment
+  for (int face = 0; face < MAX_FACE; face++) {
+    for (int y = 0; y < WORLD_HEIGHT; y++) {
+      for (int x = 0; x < WORLD_WIDTH; x++) {
+        serializer_uint8(s, &tli->initialState[face][y][x]);
+
+        logfln("fuck: %u", tli->initialState[face][y][x]);
+      }
+    }
+  }
+}
+
 struct Timeline {
+  TimelineInfo info;
+
   ActionChunk toWrite;
   MemoryArena actions;
 };
@@ -37,6 +58,16 @@ void timeline_create(Timeline* tb, MemoryArena* ma) {
   memoryArena_clear(ma);
 
   // Generate world
+  tb->info = {0};
+
+  for (int face = 0; face < MAX_FACE; face++) {
+    for (int y = 0; y < WORLD_HEIGHT; y++) {
+      for (int x = 0; x < WORLD_WIDTH; x++) {
+
+        tb->info.initialState[face][y][x] = ((real32)rand() / (real32)RAND_MAX) > 0.6f ? 1 : 0;
+      }
+    }
+  }
 
   // Generate player
   ActionChunk* chunk = memoryArena_pushStruct(ma, ActionChunk);
@@ -65,6 +96,19 @@ void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
     timeline_create(tb, ma);
 
     return;
+  }
+
+  {
+    char infoFilename[128];
+    snprintf(infoFilename, 128, "data/saves/%s.info", name);
+
+    MemoryArena arena;
+    loadFromFileAsArena((const char*) infoFilename, &arena);
+
+    Serializer s;
+    serializer_init(&s, SERIALIZER_MODE_READ, arena);
+
+    timelineInfo_serialize(&tb->info, &s);
   }
 
   uint32 rawUpTo = 0;
@@ -175,6 +219,17 @@ void timeline_save(Timeline* tb, TimeIndex worldIndex, MemoryArena* ma) {
   }
 
   writeToFile("data/saves/simple.timeline", (void*) out, strlen(out));
+
+  {
+    memoryArena_clear(&lornockData->tempArena);
+
+    Serializer s;
+    serializer_init(&s, SERIALIZER_MODE_WRITE, lornockData->tempArena);
+
+    timelineInfo_serialize(&tb->info, &s);
+
+    writeArenaToFile("data/saves/simple.info", &s.buffer);
+  }
 }
 
 void timeline_add(Timeline* tb, TimeIndex* index, MemoryArena* ma, Action a) {
