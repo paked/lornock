@@ -1,169 +1,8 @@
-#define WORLD_WIDTH 3
-#define WORLD_HEIGHT 3
-#define WORLD_DEPTH 3
-
-// Voxel direction/faces
-enum {
-  BACK,
-  FRONT,
-  LEFT,
-  RIGHT,
-  BOTTOM,
-  TOP,
-  MAX_FACE
-};
+#include <game_state.hpp>
 
 #include <entities/actions.cpp>
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
-
-void printFace(uint32 f) {
-  switch(f) {
-    case BACK:
-      { logln("back face"); } break;
-    case FRONT:
-      { logln("front face"); } break;
-    case LEFT:
-      { logln("left face"); } break;
-    case RIGHT:
-      { logln("right face"); } break;
-    case BOTTOM:
-      { logln("bottom face"); } break;
-    case TOP:
-      { logln("top face"); } break;
-    default:
-      { logln("unknown face"); } break;
-  }
-}
-
-enum {
-  ROT_FORWARD,
-  ROT_BACKWARD,
-  ROT_LEFT,
-  ROT_RIGHT,
-  ROT_IDLE
-};
-
-void printRot(uint32 r) {
-  switch (r) {
-    case ROT_FORWARD:
-      { logln("forward rotating"); } break;
-    case ROT_BACKWARD:
-      { logln("backward rotating"); } break;
-    case ROT_LEFT:
-      { logln("left rotating"); } break;
-    case ROT_RIGHT:
-      { logln("right rotating"); } break;
-    case ROT_IDLE:
-      { logln("idle rotating"); } break;
-  }
-}
-
-enum {
-  DIRECTION_UP,
-  DIRECTION_RIGHT,
-  DIRECTION_FORWARD,
-  MAX_DIRECTION
-};
-
-vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
-  // UP                       Right                     Forward
-  { vec3(0.0f, 0.0f, -1.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f) },   // Front face
-  { vec3(0.0f, 0.0f, 1.0f),  vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 1.0f, 0.0f) },  // Back face
-
-  { vec3(-1.0f, 0.0f, 0.0f),  vec3(0.0f, 1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Left face
-  { vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, -1.0f, 0.0f),  vec3(0.0f, 0.0f, -1.0f) },  // Right face
-
-  { vec3(0.0f, -1.0f, 0.0f),  vec3(1.0f, 0.0f, 0.0f),  vec3(0.0f, 0.0f, 1.0f) },  // Bottom face
-  { vec3(0.0f, 1.0f, 0.0f),   vec3(1.0f, 0.0f, 0.0f),   vec3(0.0f, 0.0f, -1.0f) }  // Top face
-};
-
-quat faceRotations[MAX_FACE] = {
-  quatFromAngleAxis(270.0f, vec3_right), // Front
-  quatFromAngleAxis(90.0f, vec3_right), // Back
-
-  quatFromAngleAxis(270.0f, vec3_forward), // Left
-  quatFromAngleAxis(90.0f, vec3_forward), // Right
-
-  quatFromAngleAxis(180.0f, vec3_right), // Bottom
-  quatFromAngleAxis(0.0f, vec3_right), // Top
-};
-
-bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
-  int offsetX = 0;
-  int offsetY = 0;
-  int offsetZ = 0;
-
-  switch(d) {
-    case BACK:
-      {
-        offsetZ = -1;
-      } break;
-    case FRONT:
-      {
-        offsetZ = 1;
-      } break;
-    case LEFT:
-      {
-        offsetX = -1;
-      } break;
-    case RIGHT:
-      {
-        offsetX = 1;
-      } break;
-    case BOTTOM:
-      {
-        offsetY = -1;
-      } break;
-    case TOP:
-      {
-        offsetY = 1;
-      } break;
-    default:
-      {
-        logln("WARNING: unknown voxel face type");
-
-        return false;
-      } break;
-  }
-
-  int posX = x + offsetX;
-  int posY = y + offsetY;
-  int posZ = z + offsetZ;
-
-  if (posX < 0 || posX > WORLD_WIDTH - 1 ||
-      posY < 0 || posY > WORLD_HEIGHT - 1||
-      posZ < 0 || posZ > WORLD_DEPTH - 1) {
-    return true;
-  }
-
-  return w[posY][posZ][posX] != 1;
-}
-
-void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
-  real32 cube[] = CUBE_MESH_DATA;
-
-  uint64 start = d * CUBE_MESH_DATA_FACE_LENGTH;
-  uint64 end = start + CUBE_MESH_DATA_FACE_LENGTH;
-
-  for (uint64 i = start; i < end; i++) {
-    real32 v = cube[i];
-
-    if (i % CUBE_MESH_ELEMENT_LEN < 3) {
-      v += offset[i % CUBE_MESH_ELEMENT_LEN];
-    }
-
-    verts[*len] = v;
-
-    *len += 1;
-  }
-}
-
-#define CAMERA_ROTATION_OFFSET (-30)
-#define CAMERA_POSITION (vec3(0, 0.0f, -7.25f))
-#define MAX_PAST_PLAYERS 10
-#define ROTATION_DURATION 400
-#define PLAYER_INVENTORY_SIZE 9
 
 enum {
   BLOCK_NONE,
@@ -172,8 +11,9 @@ enum {
 };
 
 struct GameState {
-  vec3 faceRight;
-  vec3 faceForward;
+  TimeIndex timeIndex;
+  uint64 timelineNextTickTime;
+  Timeline timeline;
 
   vec3 playerUp;
   vec3 playerRight;
@@ -184,6 +24,9 @@ struct GameState {
 
   quat cameraRotation;
 
+  vec3 faceRight;
+  vec3 faceForward;
+
   bool rotating;
   uint32 rotatingStartTime;
   real32 rotatingPitchEnd;
@@ -192,10 +35,6 @@ struct GameState {
   quat rotatingStart;
 
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
-
-  TimeIndex timeIndex;
-  uint64 timelineNextTickTime;
-  Timeline timeline;
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
   Mesh worldMesh;
@@ -252,16 +91,20 @@ void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
-  gameState_setFaceDirections(g); // g->faceRight, g->faceForward
+  timeline_load(&g->timeline, &lornockData->actionsArena, "simple");
+  g->timelineNextTickTime = 0;
 
-  g->playerUp = faceCardinalDirections[TOP][DIRECTION_UP];
-  g->playerRight = faceCardinalDirections[TOP][DIRECTION_RIGHT];
-  g->playerForward = faceCardinalDirections[TOP][DIRECTION_FORWARD];
+  g->cameraRotation = g->timeline.info.camera;
+
+  g->playerUp = g->timeline.info.up;
+  g->playerRight = g->timeline.info.right;
+  g->playerForward = g->timeline.info.forward;
+
   g->playerPos = vec3(0.0f, 1.5f, 0.0f);
   g->playerLastMove = vec3_zero;
   g->playerRotation = mat4d(1.0f);
 
-  g->cameraRotation = quatFromPitchYawRoll(90.0f, 0.0f, 0.0f);
+  gameState_setFaceDirections(g); // g->faceRight, g->faceForward
 
   g->rotating = false;
   g->rotatingStartTime = 0;
@@ -271,9 +114,6 @@ void gameState_init(State* state) {
   g->rotatingStart = quatFromPitchYawRoll(0.0f, 0.0f, 0.0f);
 
   gameState_disableAllPastPlayers(g);
-
-  timeline_load(&g->timeline, &lornockData->actionsArena, "simple");
-  g->timelineNextTickTime = 0;
 
   for (int y = 0; y < WORLD_HEIGHT; y++) {
     for (int z = 0; z < WORLD_DEPTH; z++) {
@@ -562,17 +402,25 @@ void gameState_update(State *state) {
     gameState_timeJump(g, 2);
   }
 
+  if (keyJustDown(KEY_n)) {
+    printFace(gameState_getCurrentFace(g));
+  }
+
   if (keyJustDown(KEY_l)) {
     logln("saving!");
     timeline_save(tb, g->timeIndex, &lornockData->actionsArena);
   }
 
   if (g->rotating) {
+    bool done = false;
+
     real32 pc = 1.0f - ((float) ((g->rotatingStartTime + ROTATION_DURATION) - getTime())) / ROTATION_DURATION;
 
     if (getTime() > g->rotatingStartTime + ROTATION_DURATION) {
       pc = 1.0f;
       g->rotating = false;
+
+      done = true;
     }
 
     pc = pc * pc;
@@ -583,6 +431,14 @@ void gameState_update(State *state) {
         g->rotatingRollEnd * pc) * g->rotatingStart;
 
     g->cameraRotation = quatNormalize(g->cameraRotation);
+
+    if (done) {
+      g->timeline.info.camera = g->cameraRotation;
+
+      g->timeline.info.up = g->playerUp;
+      g->timeline.info.right = g->playerRight;
+      g->timeline.info.forward = g->playerForward;
+    }
   } else {
     real32 speed = 2.0f;
     real32 dt = getDt();

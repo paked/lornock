@@ -24,6 +24,12 @@ typedef uint8 Environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
 
 struct TimelineInfo {
   Environment initialState;
+
+  quat camera;
+
+  vec3 up;
+  vec3 right;
+  vec3 forward;
 };
 
 void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
@@ -32,11 +38,15 @@ void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
     for (int y = 0; y < WORLD_HEIGHT; y++) {
       for (int x = 0; x < WORLD_WIDTH; x++) {
         serializer_uint8(s, &tli->initialState[face][y][x]);
-
-        logfln("fuck: %u", tli->initialState[face][y][x]);
       }
     }
   }
+
+  serializer_quat(s, &tli->camera);
+
+  serializer_vec3(s, &tli->up);
+  serializer_vec3(s, &tli->right);
+  serializer_vec3(s, &tli->forward);
 }
 
 struct Timeline {
@@ -52,21 +62,25 @@ void timeline_init(Timeline* tb) {
   tb->toWrite.count = 0;
 }
 
-#define PLAYER_DEFAULT_SPAWN vec3(0.0f, 1.5f, 0.0f)
-
 void timeline_create(Timeline* tb, MemoryArena* ma) {
   memoryArena_clear(ma);
 
   // Generate world
-  tb->info = {0};
+  {
+    for (int face = 0; face < MAX_FACE; face++) {
+      for (int y = 0; y < WORLD_HEIGHT; y++) {
+        for (int x = 0; x < WORLD_WIDTH; x++) {
 
-  for (int face = 0; face < MAX_FACE; face++) {
-    for (int y = 0; y < WORLD_HEIGHT; y++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
-
-        tb->info.initialState[face][y][x] = ((real32)rand() / (real32)RAND_MAX) > 0.6f ? 1 : 0;
+          tb->info.initialState[face][y][x] = ((real32)rand() / (real32)RAND_MAX) > 0.6f ? 1 : 0;
+        }
       }
     }
+
+    tb->info.up = faceCardinalDirections[TOP][DIRECTION_UP];
+    tb->info.right = faceCardinalDirections[TOP][DIRECTION_RIGHT];
+    tb->info.forward = faceCardinalDirections[TOP][DIRECTION_FORWARD];
+
+    tb->info.camera = quatFromPitchYawRoll(90.0f, 0.0f, 0.0f);
   }
 
   // Generate player
