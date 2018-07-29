@@ -112,7 +112,7 @@ Shader shader_init(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
     glGetShaderiv(fragShaderID, GL_INFO_LOG_LENGTH, &errorLogLen);
 
     if (errorLogLen) {
-      char errorLog[errorLogLen]; 
+      char errorLog[512]; 
       glGetShaderInfoLog(vertShaderID, errorLogLen, 0, errorLog);
 
       log("ERROR: Could not compile fragment shader: %s", errorLog);
@@ -133,7 +133,7 @@ Shader shader_init(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
     glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &errorLogLen);
 
     if (errorLogLen) {
-      char errorLog[errorLogLen]; 
+      char errorLog[512]; 
       glGetProgramInfoLog(programID, errorLogLen, 0, errorLog);
 
       log("ERROR: Could not link shader program: %s", errorLog);

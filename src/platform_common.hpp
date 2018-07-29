@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <assert.h>
+#include <string.h>
 
 // TODO: come up with a nicer name for dbg_assert
 #define dbg_assert(b) if (!(b)) { logfln("ASSERT FAILED: \"%s\" at \"%d\" \"%s\"", #b, __LINE__, __FILE__); }

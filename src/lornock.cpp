@@ -43,9 +43,11 @@ MemoryArena* tempMemory = 0;
 #include <ui.cpp>
 #include <states.cpp>
 
+#define EXPORT extern "C" __declspec(dllexport)
+
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set
 // any state, as we want state to persist between hot reloads.
-extern "C" int lornock_init(Platform* p) {
+EXPORT int lornock_init(Platform* p) {
   platform = p;
 
   if (!gladLoadGLLoader(p->glLoadProc)) {
@@ -61,13 +63,13 @@ extern "C" int lornock_init(Platform* p) {
   return 0;
 }
 
-extern "C" void lornock_clean(LornockMemory* m) {
+EXPORT void lornock_clean(LornockMemory* m) {
   draw_clean();
 
   logln("INFO: Cleaned code!");
 }
 
-extern "C" void lornock_update(LornockMemory* m) {
+EXPORT void lornock_update(LornockMemory* m) {
   lornockMemory = m;
   lornockData = (LornockData*) m->permanentStorage;
 
