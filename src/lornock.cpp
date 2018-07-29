@@ -43,7 +43,11 @@ MemoryArena* tempMemory = 0;
 #include <ui.cpp>
 #include <states.cpp>
 
+#ifdef _WIN32
 #define EXPORT extern "C" __declspec(dllexport)
+#else
+#define EXPORT extern "C"
+#endif
 
 // NOTE(harrison): init is ran every time the DLL is loaded. It should not set
 // any state, as we want state to persist between hot reloads.
@@ -106,3 +110,5 @@ EXPORT void lornock_update(LornockMemory* m) {
 
   state_update(&lornockData->state);
 }
+
+#undef EXPORT
