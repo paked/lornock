@@ -29,7 +29,7 @@ void pastPlayer_init(PastPlayer* pp, Timeline *tb, TimeIndex* worldIndex, Memory
   } else if(first.type == SPAWN) {
     pos = first.spawn.pos;
   } else {
-    assert(false);
+    ensure(false);
 
     logln("ERROR: invalid action to init a pastPlayer with");
   }

@@ -31,7 +31,7 @@ void serializer_binary_ ## Type ## Write(Serializer* s, Type u) { \
 \
     b = memoryArena_getLastBlock(&s->buffer); \
 \
-    assert(b != 0); \
+    ensure(b != 0); \
   } \
 \
   MemoryIndex blockSize = b->size - sizeof(MemoryBlock); \
@@ -41,7 +41,7 @@ void serializer_binary_ ## Type ## Write(Serializer* s, Type u) { \
 \
     b = memoryArena_getLastBlock(&s->buffer); \
 \
-    assert(b != 0); \
+    ensure(b != 0); \
   } \
 \
   uint8* addr = b->start + b->used; \
@@ -58,7 +58,7 @@ void serializer_binary_ ## Type ## Write(Serializer* s, Type u) { \
 void serializer_binary_ ## Type ## Read(Serializer* s, Type * u) { \
   MemoryBlock* b = memoryArena_getLastBlock(&s->buffer); \
 \
-  assert(b != 0); \
+  ensure(b != 0); \
 \
   uint8* addr = b->start + s->tip; \
 \

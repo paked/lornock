@@ -1,3 +1,9 @@
+#define ensure(stmt) \
+  if (!(stmt)) { \
+    platform->showErrorBox("Assertion failed", \
+        "%s:%i: `%s`", __FILE__, __LINE__, #stmt); \
+  }
+
 #define getTime() (platform->time)
 #define getDt() (platform->deltaTime)
 #define getWindowWidth() (platform->windowWidth)

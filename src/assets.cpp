@@ -26,7 +26,7 @@ const char* shaderFilenames[MAX_SHADER] = {
 };
 
 const char* shaderFilename(uint32 i) {
-  dbg_assert(i >= 0 && i < MAX_SHADER);
+  ensure(i >= 0 && i < MAX_SHADER);
 
   return shaderFilenames[i];
 }
@@ -38,7 +38,7 @@ const char* textureFilenames[MAX_TEXTURE] = {
 };
 
 const char* textureFilename(uint32 i) {
-  dbg_assert(i >= 0 && i < MAX_TEXTURE);
+  ensure(i >= 0 && i < MAX_TEXTURE);
 
   return textureFilenames[i];
 }
@@ -50,7 +50,7 @@ const char* modelFilenames[MAX_MODEL] = {
 };
 
 const char* modelFilename(uint32 i) {
-  dbg_assert(i >= 0 && i < MAX_MODEL);
+  ensure(i >= 0 && i < MAX_MODEL);
 
   return modelFilenames[i];
 }
@@ -360,7 +360,7 @@ Model model_init(const char* name) {
 
   MemoryArena* temp = tempMemory;
 
-  assert(MAX_VERTEX_BYTES + MAX_UV_BYTES + MAX_NORMAL_BYTES +
+  ensure(MAX_VERTEX_BYTES + MAX_UV_BYTES + MAX_NORMAL_BYTES +
       MAX_VERTEX_INDEX_BYTES + MAX_UV_INDEX_BYTES + MAX_NORMAL_INDEX_BYTES +
       MAX_FINAL_VERTEX_BYTES + MAX_FINAL_UV_BYTES + MAX_FINAL_NORMAL_BYTES
       < temp->size);
@@ -426,7 +426,7 @@ Model model_init(const char* name) {
 
       int count = sscanf(line, "v %f %f %f", &vert.x, &vert.y, &vert.z);
 
-      assert(count == 3);
+      ensure(count == 3);
 
       verts[vertsCount] = vert;
 
@@ -437,7 +437,7 @@ Model model_init(const char* name) {
       vec3 normal;
 
       int count = sscanf(line, "vn %f %f %f", &normal.x, &normal.y, &normal.z);
-      assert(count == 3);
+      ensure(count == 3);
 
       normals[normalsCount] = normal;
 
@@ -448,7 +448,7 @@ Model model_init(const char* name) {
       vec2 uv;
 
       int count = sscanf(line, "vt %f %f", &uv.x, &uv.y);
-      assert(count == 2);
+      ensure(count == 2);
 
       uvs[uvsCount] = uv;
 
@@ -473,7 +473,7 @@ Model model_init(const char* name) {
           &v2V, &v2VT, &v2VN,
           &v3V, &v3VT, &v3VN);
 
-      assert(count == 9);
+      ensure(count == 9);
 
       // populate v1, v2, v3
 
@@ -595,7 +595,7 @@ Model model_init(const char* name) {
 
   memoryArena_clear(temp);
 
-  assert(m.vao != 0);
+  ensure(m.vao != 0);
 
   return m;
 }
@@ -603,7 +603,7 @@ Model model_init(const char* name) {
 void model_clean(Model* m) {
   // TODO(harrison): implement me
 
-  assert(false);
+  ensure(false);
 }
 
 struct Assets {

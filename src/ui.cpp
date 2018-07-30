@@ -90,7 +90,7 @@ void ui_toolbarBegin(UIID id) {
     e->type = UI_ELEMENT_TOOLBAR;
 
     ui.elementCount += 1;
-    assert(ui.elementCount < UI_MAX_ELEMENTS);
+    ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
 
   e->offset = 0;
@@ -100,7 +100,7 @@ void ui_toolbarBegin(UIID id) {
 }
 
 void ui_toolbarEnd() {
-  assert(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
+  ensure(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
 
   ui.parent->rect.x -= ui.parent->offset/2;
   ui.parent->rect.w = ui.parent->offset;
@@ -109,7 +109,7 @@ void ui_toolbarEnd() {
 }
 
 void ui_toolbarOption(UIID id, bool selected, int32 tex=-1) {
-  assert(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
+  ensure(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
 
   UIElement* e = ui_getElement(id);
   if (e == 0) {
@@ -118,7 +118,7 @@ void ui_toolbarOption(UIID id, bool selected, int32 tex=-1) {
     e->type = UI_ELEMENT_TOOLBAR_OPTION;
 
     ui.elementCount += 1;
-    assert(ui.elementCount < UI_MAX_ELEMENTS);
+    ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
 
   if (tex == -1) {
@@ -172,7 +172,7 @@ void ui_draw() {
         } break;
       default:
         {
-          assert(false);
+          ensure(false);
         } break;
     }
   }

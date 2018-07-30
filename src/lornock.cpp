@@ -17,23 +17,22 @@
 #include <stb_image.h>
 
 //
-// Platform common
+// Lornock code
 //
+
+// Globals
 #include <platform_common.hpp>
 
 Platform* platform = 0;
 LornockMemory* lornockMemory = 0;
 MemoryArena* tempMemory = 0;
 
-//
-// Lornock code
-//
-
 // Utilities
+#include <globals.cpp>
 #include <hmm_wrapper.cpp>
 #include <friendly/math.cpp>
 #include <friendly/string.cpp>
-#include <globals.cpp>
+#include <memory.hpp>
 
 // Real code
 #include <serializer.cpp>
@@ -79,7 +78,7 @@ EXPORT void lornock_update(LornockMemory* m) {
 
   tempMemory = &lornockData->tempArena;
 
-  dbg_assert(sizeof(*lornockData) < m->permanentStorageSize);
+  ensure(sizeof(*lornockData) < m->permanentStorageSize);
 
   if (!m->initialized) {
     uint8* head = (uint8*) m->permanentStorage + sizeof(*lornockData);

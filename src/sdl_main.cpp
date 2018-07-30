@@ -8,11 +8,15 @@
 // Include external libraries
 #include <SDL.h>
 #include <time.h>
+#include <assert.h>
 
 // Include common
 #include <platform_common.hpp>
 
 // Include internal libraries
+#define ensure(stmt) assert((stmt))
+#include <memory.hpp>
+#undef ensure
 
 typedef void (*GameLibUpdateFunction)(LornockMemory*);
 GameLibUpdateFunction gameLibUpdateFunction;
@@ -28,6 +32,8 @@ GameLibCleanFunction gameLibCleanFunction;
 #include <sdl_linux.cpp>
 
 #define ALLOCATE_MEMORY_FUNC linux_allocateMemory
+#define FREE_MEMORY_FUNC munmap
+
 #define LOAD_FROM_FILE_FUNC linux_loadFromFile
 #define WRITE_TO_FILE_FUNC linux_writeToFile
 #define LIB_NEEDS_RELOADING_FUNC linux_libNeedsReloading
@@ -107,7 +113,28 @@ void writeArenaToFile(const char* path, MemoryArena* ma) {
 
   WRITE_TO_FILE_FUNC(path, mem, index);
 
-  munmap(mem, totalSize);
+  FREE_MEMORY_FUNC(mem, totalSize);
+}
+
+void showErrorBox(const char* title, const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  uint64 characterCount = vsnprintf(0, 0, fmt, args)+1;
+  va_end(args);
+
+  char *text = (char *) ALLOCATE_MEMORY_FUNC(characterCount);
+
+  va_start(args, fmt);
+  vsnprintf(text, characterCount, fmt, args);
+  va_end(args);
+
+  if (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, text, NULL) != 0) {
+    logfln("ERROR: could not open message box (%s: %s)", title, text);
+  }
+
+  FREE_MEMORY_FUNC(text, characterCount);
+
+  exit(1);
 }
 
 void toggleFullscreen() {
@@ -190,6 +217,7 @@ int main(int argc, char** argv) {
   // Configure platform
   platform.fps = 60; // TODO(harrison): set this dynamically based on the actual screen refresh-rate
   platform.glLoadProc = SDL_GL_GetProcAddress;
+  platform.showErrorBox = showErrorBox;
   platform.loadFromFile = LOAD_FROM_FILE_FUNC;
   platform.loadFromFileAsArena = loadFromFileAsArena;
   platform.writeToFile = WRITE_TO_FILE_FUNC;

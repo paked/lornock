@@ -112,7 +112,7 @@ void action_serialize(Action a, char* out) {
       {
         logln("ERROR: cannot serialize unknown action type");
 
-        assert(false);
+        ensure(false);
         return;
       } break;
   }

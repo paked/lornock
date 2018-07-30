@@ -51,7 +51,7 @@ uint32 gameState_getCurrentFace(GameState *g) {
     }
   }
 
-  assert(false);
+  ensure(false);
 
   return -1;
 }
@@ -181,7 +181,7 @@ void gameState_init(State* state) {
   {
     Action a = { 0 };
 
-    assert(timeline_findLastAction(&g->timeline, &lornockData->actionsArena, &a));
+    ensure(timeline_findLastAction(&g->timeline, &lornockData->actionsArena, &a));
 
     action_print(a);
 

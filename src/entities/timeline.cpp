@@ -144,7 +144,7 @@ void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
 
     Action a;
 
-    assert(action_parse(&a, line, lineLen));
+    ensure(action_parse(&a, line, lineLen));
 
     chunk->actions[chunk->count] = a;
     chunk->count += 1;
@@ -161,7 +161,7 @@ void timeline_commit(Timeline* tb, MemoryArena* ma) {
   if (!actionChunk_add(chunk, action)) {\
     logln("RAN OVER CHUNK. DOING ANOTHER THING.");\
     chunk = memoryArena_pushStruct(temp, ActionChunk);\
-    assert(actionChunk_add(chunk, action));\
+    ensure(actionChunk_add(chunk, action));\
   }
 
   TimeIndex index;
@@ -260,7 +260,7 @@ void timeline_add(Timeline* tb, TimeIndex* index, MemoryArena* ma, Action a) {
   a.common.sequence = index->sequence;
   a.common.jumpID = index->jumpID;
 
-  assert(actionChunk_add(&tb->toWrite, a));
+  ensure(actionChunk_add(&tb->toWrite, a));
 }
 
 bool timeline_nextActionInSequence(Timeline* tb, MemoryArena* ma, uint64 sequence, Action *a) {

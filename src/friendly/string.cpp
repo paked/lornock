@@ -58,7 +58,7 @@ void eatUntilWhitespace(char* out, uint32 outLen, char* line, uint32 lineLen, ui
   out[i] = '\0';
 
   while (i + *head < lineLen) {
-    assert(i < outLen);
+    ensure(i < outLen);
 
     out[i] = '\0';
 

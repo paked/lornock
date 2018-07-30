@@ -62,14 +62,14 @@ void* memoryArena_pushSize(MemoryArena* ma, MemoryIndex size) {
       i = i->next;
     } 
 
-    assert(last != 0);
+    ensure(last != 0);
 
     end = last->base + last->size;
   }
 
   MemoryIndex blockSize = sizeof(MemoryBlock) + size;
 
-  assert(totalSize + blockSize < ma->size);
+  ensure(totalSize + blockSize < ma->size);
 
   MemoryBlock* block = (MemoryBlock*) end;
   block->base = end;
