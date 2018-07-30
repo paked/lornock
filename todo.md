@@ -2,7 +2,6 @@
 
 Todo:
 
-- Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - Make billboarding work on a per face basis
 - Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct
@@ -13,13 +12,16 @@ Todo:
 - Create "assets" memory pool which can dynamically grow, and will release files when they're not needed
   - Change loadFromFile interface to load file into provided data
 - Remove all references to transient arena, instead access through TempArena
-- Serialize camera position in save-file
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 - Store a MemoryArena inside a `Timeline` struct, and actually use it
 
 In progress:
 - [ ] Add items to the world which can be picked up and placed in inventory
-  - [ ] Find some way to save these in the world file?
+  - [x] Create serializer, with easy way to swap out implementations (ie. binary vs debug plaintext)
+  - [x] Create "world info" structure, which gets serialized, loaded etc.
+    - [x] Serialize camera position and rotation
+    - [x] Serialize initial state of the environment
+  - Add ability for player to destroy environment, serialize this
 - [ ] Create basic UI library
   - [x] Render rectangle
   - [x] Render icons
@@ -39,6 +41,7 @@ In progress:
   - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - [x] Make time jumps not have to access the disk.
   - Write ActionChunks into a temporary arena
   - Then copy back into ActionArena once complete
