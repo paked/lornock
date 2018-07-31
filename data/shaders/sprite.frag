@@ -7,5 +7,6 @@ in vec2 UV;
 out vec4 FragColor;
 
 void main() {
-    FragColor = texture(ourTexture, UV);
+    float depthValue = texture(ourTexture, UV).r;
+    FragColor = vec4(vec3(depthValue), 1.0);
 }

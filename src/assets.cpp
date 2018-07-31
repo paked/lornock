@@ -140,9 +140,7 @@ Shader shader_init(void* vert, uint32 vertLen, void* frag, uint32 fragLen) {
     }
   }
 
-  if (failed) {
-    logln("ERROR: Could not link shader");
-  }
+  ensure(failed != true);
 
   glDeleteShader(fragShaderID);
   glDeleteShader(vertShaderID);
@@ -223,6 +221,19 @@ bool shader_setVec2(Shader* shader, const char* name, vec2 v) {
   }
 
   glUniform2f(loc, v.x, v.y);
+
+  return true;
+}
+
+bool shader_setInt(Shader* shader, const char* name, int v) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logfln("ERROR: cannot find uniform location %s", name);
+
+    return false;
+  }
+
+  glUniform1i(loc, v);
 
   return true;
 }

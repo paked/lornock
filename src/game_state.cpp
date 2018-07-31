@@ -41,7 +41,8 @@ struct GameState {
 
   Mesh cubeMesh;
 
-  GLuint cubeVAO;
+  GLuint shadowFBO;
+  GLuint shadowMap;
 };
 
 uint32 gameState_getCurrentFace(GameState *g) {
@@ -161,10 +162,38 @@ void gameState_init(State* state) {
   real32 cubeData[] = CUBE_MESH_DATA;
   g->cubeMesh = mesh_init(cubeData, sizeof(cubeData)/sizeof(real32));
 
+  glGenFramebuffers(1, &g->shadowFBO);
+
+  // const unsigned int SHADOW_WIDTH = getWindowWidth(), SHADOW_HEIGHT = getWindowHeight();
+  const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+
+  GLuint shadowMap;
+  glGenTextures(1, &shadowMap);
+
+  glBindTexture(GL_TEXTURE_2D, shadowMap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+  float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, g->shadowFBO);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  g->shadowMap = shadowMap;
+
   assets_requestShader(SHADER_default);
+  assets_requestShader(SHADER_depth);
+
   assets_requestShader(SHADER_sprite);
   assets_requestShader(SHADER_rectangle);
-  assets_requestShader(SHADER_rectangle);
+
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
   assets_requestTexture(TEXTURE_rock);
@@ -357,6 +386,165 @@ void gameState_timeJump(GameState *g, int64 destination) {
   gameState_spawnNecessaryPastPlayers(g, tb, index);
 }
 
+void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
+  uint8 v = g->timeline.info.initialState[face][y][x];
+
+  if (v == BLOCK_NONE) {
+    v = BLOCK_COAL;
+  } else {
+    v = BLOCK_NONE;
+  }
+
+  g->timeline.info.initialState[face][y][x] = v;
+}
+
+enum RenderMode {
+  RENDER_MODE_NORMAL,
+  RENDER_MODE_LIGHT,
+};
+
+void gameState_render(GameState *g, RenderMode m) {
+  vec3 lightColor = vec3_one;
+  float t = deg2Rad(getTime()/20.0f);
+  // vec3 lightPos = vec3(0.0f, 8.0f, -5.0f);
+  vec3 lightPos = vec3(sin(t)*10, 4, cos(t)*10);
+
+  mat4 lightView = mat4LookAt(mat4d(1.0f), lightPos, vec3(0.0f, 0.0f, 0.0f));
+  mat4 lightProjection = mat4Orthographic(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, 100.0f);
+
+  if (m == RENDER_MODE_NORMAL) {
+    draw_begin(); // Clear buffers, set viewport size, etc.
+
+    draw_3d_begin(70.0f);
+
+    // TODO(harrison): refactor into OrbitalCamera struct.
+    {
+      mat4 view = mat4d(1.0f);
+      view = mat4Translate(view, CAMERA_POSITION);
+      view = view * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
+      view = view * quatToMat4(g->cameraRotation);
+
+      draw.view = view;
+    }
+
+    draw_setShader(shader(SHADER_default));
+
+    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
+    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
+
+    mat4 lightSpaceMatrix = lightProjection * lightView;
+
+    shader_setInt(&draw.activeShader, "shadowMap", 1);
+    shader_setInt(&draw.activeShader, "ourTexture", 0);
+
+    shader_setMatrix(&draw.activeShader, "lightSpaceMatrix", lightSpaceMatrix);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, g->shadowMap);
+  } else if (m == RENDER_MODE_LIGHT) {
+    glViewport(0, 0, 1024, 1024);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    draw.view = lightView;
+
+    draw.projection = lightProjection;
+
+    draw_setShader(shader(SHADER_depth));
+  } else {
+    ensure(false);
+  }
+
+  {
+    vec3 asteroidPosition = vec3(0, 0, 0);
+    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
+
+    mat4 model = mat4d(1);
+    model = mat4Translate(model, asteroidOffset);
+    model = mat4Translate(model, asteroidPosition);
+
+    draw_3d_mesh(g->worldMesh, model, texture(TEXTURE_rock));
+  }
+
+  {
+    real32 scale = 0.4f;
+
+    mat4 model = mat4d(1.0f);
+    model = mat4Translate(model, g->playerPos);
+    model = mat4Translate(model, -1*vec3_one/2*scale);
+    model = mat4Scale(model, vec3_one*scale);
+
+    draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+  }
+
+  {
+    for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
+      PastPlayer pp = g->pastPlayers[i];
+
+      if (!pp.exists) {
+        continue;
+      }
+
+      real32 scale = 0.4f;
+
+      mat4 model = mat4d(1.0f);
+      model = mat4Translate(model, pp.pos);
+      model = mat4Translate(model, -1*vec3_one/2*scale);
+      model = mat4Scale(model, vec3_one*scale);
+
+      draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+    }
+  }
+
+  // Draw items
+  {
+    vec3 worldOffset = vec3(-1.5f, 1.3, -1.5f);
+    vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
+
+    for (int f = 0; f < MAX_FACE; f++) {
+      mat4 face = quatToMat4(faceRotations[f]);
+
+      for (int y = 0; y < WORLD_HEIGHT; y++) {
+        for (int x = 0; x < WORLD_WIDTH; x++) {
+          uint32 type = g->timeline.info.initialState[f][y][x];
+          if (type == BLOCK_NONE) {
+            continue;
+          }
+
+          mat4 model = mat4d(1.0f);
+          model = mat4Translate(model, worldOffset + modelOffset);
+          model = mat4Translate(model, vec3(x, 0, y));
+          model = face * model;
+
+          draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
+        }
+      }
+    }
+  }
+
+  if (m == RENDER_MODE_NORMAL) {
+    {
+      draw_2d_begin();
+      ui_begin();
+
+      {
+        ui_toolbarBegin(uiid_gen());
+
+        ui_toolbarOption(uiid_gen(), false, TEXTURE_rock_icon);
+        ui_toolbarOption(uiid_gen(), false);
+        ui_toolbarOption(uiid_gen(), false);
+
+        ui_toolbarEnd();
+      }
+
+      ui_end();
+
+    }
+
+    ui_draw();
+  }
+}
+
 void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
   Timeline* tb = &g->timeline;
@@ -495,51 +683,6 @@ void gameState_update(State *state) {
     g->playerPos.x = clamp(g->playerPos.x, -1.5f, 1.5f);
     g->playerPos.y = clamp(g->playerPos.y, -1.5f, 1.5f);
     g->playerPos.z = clamp(g->playerPos.z, -1.5f, 1.5f);
-  }
-
-  draw_begin(); // Clear buffers, set viewport size, etc.
-
-  draw_3d_begin(70.0f);
-  
-  // TODO(harrison): refactor into OrbitalCamera struct.
-  {
-    mat4 view = mat4d(1.0f);
-    view = mat4Translate(view, CAMERA_POSITION);
-    view = view * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
-    view = view * quatToMat4(g->cameraRotation);
-
-    draw.view = view;
-  }
-
-  vec3 lightColor = vec3_one;
-  vec3 lightPos = vec3(0.0f, 8.0f, -5.0f);
-
-  {
-    draw_setShader(shader(SHADER_default));
-    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
-    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
-
-    vec3 asteroidPosition = vec3(0, 0, 0);
-    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
-
-    mat4 model = mat4d(1);
-    model = mat4Translate(model, asteroidOffset);
-    model = mat4Translate(model, asteroidPosition);
-
-    draw_3d_mesh(g->worldMesh, model, texture(TEXTURE_rock));
-  }
-
-  {
-    draw_setShader(shader(SHADER_default));
-    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
-    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
-
-    real32 scale = 0.25f;
-
-    mat4 model = mat4d(1.0f);
-    model = mat4Translate(model, g->playerPos);
-    model = mat4Translate(model, -1*vec3_one/2*scale);
-    model = mat4Scale(model, vec3_one*scale);
 
     if (keyJustDown(KEY_space)) {
       real32 rx = vec3Sum(g->playerPos * g->playerRight);
@@ -554,53 +697,10 @@ void gameState_update(State *state) {
     }
   }
 
-  // Draw items
-  {
-    draw_setShader(shader(SHADER_default));
-    shader_setVec3(&draw.activeShader, "lightColor", lightColor);
-    shader_setVec3(&draw.activeShader, "lightPos", lightPos);
+  glBindFramebuffer(GL_FRAMEBUFFER, g->shadowFBO);
+  gameState_render(g, RENDER_MODE_LIGHT);
 
-    vec3 worldOffset = vec3(-1.5f, 1.3, -1.5f);
-    vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    for (int f = 0; f < MAX_FACE; f++) {
-      mat4 face = quatToMat4(faceRotations[f]);
-
-      for (int y = 0; y < WORLD_HEIGHT; y++) {
-        for (int x = 0; x < WORLD_WIDTH; x++) {
-          uint32 type = g->timeline.info.initialState[f][y][x];
-          if (type == BLOCK_NONE) {
-            continue;
-          }
-
-          mat4 model = mat4d(1.0f);
-          model = mat4Translate(model, worldOffset + modelOffset);
-          model = mat4Translate(model, vec3(x, 0, y));
-          model = face * model;
-
-          draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
-        }
-      }
-    }
-  }
-
-  draw_2d_begin();
-  {
-    ui_begin();
-
-    {
-      ui_toolbarBegin(uiid_gen());
-
-      ui_toolbarOption(uiid_gen(), false, TEXTURE_rock_icon);
-      ui_toolbarOption(uiid_gen(), false);
-      ui_toolbarOption(uiid_gen(), false);
-
-      ui_toolbarEnd();
-    }
-
-    ui_end();
-
-  }
-
-  ui_draw();
+  gameState_render(g, RENDER_MODE_NORMAL);
 }

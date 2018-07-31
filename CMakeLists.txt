@@ -53,6 +53,10 @@ include_directories(
 set(DATA_FILES
     data/shaders/default.vert
     data/shaders/default.frag
+    data/shaders/depth.vert
+    data/shaders/depth.frag
+
+    # 2D
     data/shaders/rectangle.vert
     data/shaders/rectangle.frag
     data/shaders/sprite.vert

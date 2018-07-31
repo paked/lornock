@@ -85,8 +85,11 @@ void draw_begin() {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-
 void draw_setShader(Shader s) {
+  if (s.id == draw.activeShader.id) {
+    return;
+  }
+
   glUseProgram(s.id);
 
   draw.activeShader = s;
@@ -144,6 +147,7 @@ void draw_sprite(Rect rect, Texture t) {
   shader_setMatrix(&draw.activeShader, "view", draw.view);
   shader_setMatrix(&draw.activeShader, "projection", draw.projection);
 
+  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, t.id);
 
   glBindVertexArray(draw.quadVAO);
@@ -158,6 +162,7 @@ void draw_3d_mesh(Mesh mesh, mat4 model, Texture t) {
   shader_setMatrix(&draw.activeShader, "view", draw.view);
   shader_setMatrix(&draw.activeShader, "projection", draw.projection);
 
+  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, t.id);
   glBindVertexArray(mesh.vao);
   glDrawArrays(GL_TRIANGLES, 0, mesh.faceCount);
@@ -170,6 +175,7 @@ void draw_3d_model(Model m, mat4 model, Texture t) {
   shader_setMatrix(&draw.activeShader, "view", draw.view);
   shader_setMatrix(&draw.activeShader, "projection", draw.projection);
 
+  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, t.id);
   glBindVertexArray(m.vao);
   glDrawArrays(GL_TRIANGLES, 0, m.vertCount);
