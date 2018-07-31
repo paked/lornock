@@ -156,6 +156,8 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
     key = KEY_ctrl;
   } else if (scancode == SDL_SCANCODE_TAB) {
     key = KEY_tab;
+  } else if (scancode == SDL_SCANCODE_SPACE) {
+    key = KEY_space;
   } else if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
     key = KEY_a + (scancode - SDL_SCANCODE_A);
   } else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {

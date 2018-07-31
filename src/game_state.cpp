@@ -541,27 +541,16 @@ void gameState_update(State *state) {
     model = mat4Translate(model, -1*vec3_one/2*scale);
     model = mat4Scale(model, vec3_one*scale);
 
-    draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
-  }
+    if (keyJustDown(KEY_space)) {
+      real32 rx = vec3Sum(g->playerPos * g->playerRight);
+      real32 ry = vec3Sum(g->playerPos * g->playerForward) * -1;
 
-  {
-    draw_setShader(shader(SHADER_default));
+      int x = (int) (rx + 1.5f);
+      int y = (int) (ry + 1.5f);
 
-    for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
-      PastPlayer pp = g->pastPlayers[i];
+      int face = gameState_getCurrentFace(g);
 
-      if (!pp.exists) {
-        continue;
-      }
-
-      real32 scale = 0.25f;
-
-      mat4 model = mat4d(1.0f);
-      model = mat4Translate(model, pp.pos);
-      model = mat4Translate(model, -1*vec3_one/2*scale);
-      model = mat4Scale(model, vec3_one*scale);
-
-      draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
+      gameState_touchEnvironment(g, face, x, y);
     }
   }
 
