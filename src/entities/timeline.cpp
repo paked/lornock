@@ -53,17 +53,19 @@ struct Timeline {
   TimelineInfo info;
 
   ActionChunk toWrite;
-  MemoryArena actions;
+  MemoryArena* arena;
 };
 
-bool timeline_nextAction(Timeline* tb, MemoryArena* ma, TimeIndex* index, Action *a);
+bool timeline_nextAction(Timeline* tb, TimeIndex* index, Action *a);
 
-void timeline_init(Timeline* tb) {
+void timeline_init(Timeline* tb, MemoryArena* ma) {
   tb->toWrite.count = 0;
+
+  tb->arena = ma;
 }
 
-void timeline_create(Timeline* tb, MemoryArena* ma) {
-  memoryArena_clear(ma);
+void timeline_create(Timeline* tb) {
+  memoryArena_clear(tb->arena);
 
   // Generate world
   {
@@ -84,7 +86,7 @@ void timeline_create(Timeline* tb, MemoryArena* ma) {
   }
 
   // Generate player
-  ActionChunk* chunk = memoryArena_pushStruct(ma, ActionChunk);
+  ActionChunk* chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
 
   Action a = action_makeSpawn(PLAYER_DEFAULT_SPAWN);
 
@@ -96,7 +98,7 @@ void timeline_create(Timeline* tb, MemoryArena* ma) {
   chunk->count += 1;
 }
 
-void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
+void timeline_load(Timeline* tb, const char* name) {
   char saveFilename[128];
   snprintf(saveFilename, 128, "data/saves/%s.timeline", name);
 
@@ -107,7 +109,7 @@ void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
 
   if (rawLen == 0) {
     logln("INFO: creating file");
-    timeline_create(tb, ma);
+    timeline_create(tb);
 
     return;
   }
@@ -128,9 +130,9 @@ void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
   uint32 rawUpTo = 0;
   char *raw = (char*) rawData;
 
-  memoryArena_clear(ma);
+  memoryArena_clear(tb->arena);
 
-  ActionChunk* chunk = memoryArena_pushStruct(ma, ActionChunk);
+  ActionChunk* chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
   chunk->count = 0;
 
   // TODO(harrison): ensure that new memory gets zeroed out.
@@ -150,13 +152,13 @@ void timeline_load(Timeline* tb, MemoryArena* ma, const char* name) {
     chunk->count += 1;
 
     if (chunk->count >= ACTION_CHUNK_MAX) {
-      chunk = memoryArena_pushStruct(ma, ActionChunk);
+      chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
       chunk->count = 0;
     }
   }
 }
 
-void timeline_commit(Timeline* tb, MemoryArena* ma) {
+void timeline_commit(Timeline* tb) {
 #define commit(action) \
   if (!actionChunk_add(chunk, action)) {\
     logln("RAN OVER CHUNK. DOING ANOTHER THING.");\
@@ -182,7 +184,7 @@ void timeline_commit(Timeline* tb, MemoryArena* ma) {
 
     {
       Action a;
-      while (timeline_nextAction(tb, ma, &index, &a)) {
+      while (timeline_nextAction(tb, &index, &a)) {
         commit(a);
       }
     }
@@ -195,16 +197,16 @@ void timeline_commit(Timeline* tb, MemoryArena* ma) {
   index.time = INT64_MAX;
 
   Action a;
-  while (timeline_nextAction(tb, ma, &index, &a)) {
+  while (timeline_nextAction(tb, &index, &a)) {
     commit(a);
   }
 
 #undef commit
 
-  memoryArena_clear(ma);
+  memoryArena_clear(tb->arena);
 
   for (MemoryBlock* block = temp->first; block != 0; block = block->next) {
-    chunk = memoryArena_pushStruct(ma, ActionChunk);
+    chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
 
     ActionChunk* ac = (ActionChunk*) block->start;
 
@@ -214,9 +216,9 @@ void timeline_commit(Timeline* tb, MemoryArena* ma) {
   tb->toWrite.count = 0;
 }
 
-void timeline_save(Timeline* tb, TimeIndex worldIndex, MemoryArena* ma) {
+void timeline_save(Timeline* tb, TimeIndex worldIndex) {
   if (tb->toWrite.count > 0) {
-    timeline_commit(tb, ma);
+    timeline_commit(tb);
   }
 
   char* out = (char*) lornockMemory->transientStorage;
@@ -228,7 +230,7 @@ void timeline_save(Timeline* tb, TimeIndex worldIndex, MemoryArena* ma) {
   index.time = INT64_MAX;
 
   Action a;
-  while (timeline_nextAction(tb, ma, &index, &a)) {
+  while (timeline_nextAction(tb, &index, &a)) {
     action_serialize(a, out);
   }
 
@@ -246,11 +248,11 @@ void timeline_save(Timeline* tb, TimeIndex worldIndex, MemoryArena* ma) {
   }
 }
 
-void timeline_add(Timeline* tb, TimeIndex* index, MemoryArena* ma, Action a) {
+void timeline_add(Timeline* tb, TimeIndex* index, Action a) {
   if (tb->toWrite.count >= ACTION_CHUNK_MAX) {
     logln("flushing buffer!");
 
-    timeline_commit(tb, ma);
+    timeline_commit(tb);
 
     tb->toWrite.count = 0;
   }
@@ -263,8 +265,8 @@ void timeline_add(Timeline* tb, TimeIndex* index, MemoryArena* ma, Action a) {
   ensure(actionChunk_add(&tb->toWrite, a));
 }
 
-bool timeline_nextActionInSequence(Timeline* tb, MemoryArena* ma, uint64 sequence, Action *a) {
-  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+bool timeline_nextActionInSequence(Timeline* tb, uint64 sequence, Action *a) {
+  for (MemoryBlock* block = tb->arena->first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
     for (uint64 i = 0; i < ac->count; i++) {
@@ -281,8 +283,8 @@ bool timeline_nextActionInSequence(Timeline* tb, MemoryArena* ma, uint64 sequenc
   return false;
 }
 
-bool timeline_actionInSequence(Timeline* tb, MemoryArena* ma, uint64 sequence, Action *a) {
-  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+bool timeline_actionInSequence(Timeline* tb, uint64 sequence, Action *a) {
+  for (MemoryBlock* block = tb->arena->first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
     for (uint64 i = 0; i < ac->count; i++) {
@@ -300,11 +302,11 @@ bool timeline_actionInSequence(Timeline* tb, MemoryArena* ma, uint64 sequence, A
 }
 
 
-bool timeline_nextAction(Timeline* tb, MemoryArena* ma, TimeIndex* index, Action *a) {
+bool timeline_nextAction(Timeline* tb, TimeIndex* index, Action *a) {
   uint64 p = 0;
   int64 lastTime = -1;
 
-  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+  for (MemoryBlock* block = tb->arena->first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
     for (uint64 i = 0; i < ac->count; i++) {
@@ -346,13 +348,13 @@ bool timeline_nextAction(Timeline* tb, MemoryArena* ma, TimeIndex* index, Action
   return false;
 }
 
-bool timeline_findLastAction(Timeline* tb, MemoryArena* ma, Action* a) {
+bool timeline_findLastAction(Timeline* tb, Action* a) {
   bool found = false;
 
   uint64 seq = 0;
   Action latest = {0};
 
-  for (MemoryBlock* block = lornockData->actionsArena.first; block != 0; block = block->next) {
+  for (MemoryBlock* block = tb->arena->first; block != 0; block = block->next) {
     ActionChunk* ac = (ActionChunk*) block->start;
 
     for (uint64 i = 0; i < ac->count; i++) {

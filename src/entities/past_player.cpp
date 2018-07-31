@@ -14,9 +14,9 @@ struct PastPlayer {
   uint32 duration;
 };
 
-void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma);
+void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex);
 
-void pastPlayer_init(PastPlayer* pp, Timeline *tb, TimeIndex* worldIndex, MemoryArena* ma, Action first) {
+void pastPlayer_init(PastPlayer* pp, Timeline *tb, TimeIndex* worldIndex, Action first) {
   pp->exists = true;
   pp->moving = true;
 
@@ -40,16 +40,16 @@ void pastPlayer_init(PastPlayer* pp, Timeline *tb, TimeIndex* worldIndex, Memory
   pp->startTime = 0;
   pp->duration = 0;
 
-  pastPlayer_setupNextMove(pp, tb, worldIndex, ma);
+  pastPlayer_setupNextMove(pp, tb, worldIndex);
 }
 
-void pastPlayer_update(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+void pastPlayer_update(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex) {
   if (!pp->exists) {
     return;
   }
 
   Action a;
-  while (timeline_nextActionInSequence(tb, ma, pp->sequence, &a) && a.common.time < worldIndex->time) {
+  while (timeline_nextActionInSequence(tb, pp->sequence, &a) && a.common.time < worldIndex->time) {
     pp->sequence = a.common.sequence;
 
     switch (a.type) {
@@ -58,7 +58,7 @@ void pastPlayer_update(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, Memo
           pp->pos = a.move.pos;
           pp->lastTime = a.common.time;
 
-          pastPlayer_setupNextMove(pp, tb, worldIndex, ma);
+          pastPlayer_setupNextMove(pp, tb, worldIndex);
         } break;
       case JUMP:
         {
@@ -83,12 +83,12 @@ void pastPlayer_update(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, Memo
   pp->pos = vec3Lerp(pc, pp->start, pp->destination);
 }
 
-void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex, MemoryArena* ma) {
+void pastPlayer_setupNextMove(PastPlayer* pp, Timeline* tb, TimeIndex* worldIndex) {
   Action next = { 0 };
   uint64 current = pp->sequence;
 
   while (next.common.type != MOVE) {
-    if (!timeline_nextActionInSequence(tb, ma, current, &next)) {
+    if (!timeline_nextActionInSequence(tb, current, &next)) {
       pp->moving = false;
 
       break;

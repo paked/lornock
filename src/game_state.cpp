@@ -56,7 +56,7 @@ uint32 gameState_getCurrentFace(GameState *g) {
   return -1;
 }
 
-void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex, MemoryArena *ma);
+void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex);
 
 void gameState_setFaceDirections(GameState* g) {
   mat4 view = mat4d(1);
@@ -91,7 +91,8 @@ void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
-  timeline_load(&g->timeline, &lornockData->actionsArena, "simple");
+  timeline_init(&g->timeline, &lornockData->actionsArena);
+  timeline_load(&g->timeline, "simple");
   g->timelineNextTickTime = 0;
 
   g->cameraRotation = g->timeline.info.camera;
@@ -181,7 +182,7 @@ void gameState_init(State* state) {
   {
     Action a = { 0 };
 
-    ensure(timeline_findLastAction(&g->timeline, &lornockData->actionsArena, &a));
+    ensure(timeline_findLastAction(&g->timeline, &a));
 
     action_print(a);
 
@@ -192,7 +193,7 @@ void gameState_init(State* state) {
     uint64 current = a.common.sequence;
 
     bool found = true;
-    while (timeline_actionInSequence(&g->timeline, &lornockData->actionsArena, current, &a)) {
+    while (timeline_actionInSequence(&g->timeline, current, &a)) {
       if (a.common.type == MOVE || a.common.type == SPAWN) {
         found = true;
 
@@ -215,7 +216,7 @@ void gameState_init(State* state) {
     }
   }
 
-  gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex, &lornockData->actionsArena);
+  gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -291,14 +292,14 @@ void gameState_rotate(GameState* g, uint32 direction) {
   g->rotatingRollEnd = 0.0f;
 }
 
-void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex, MemoryArena *ma) {
+void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* worldIndex) {
   gameState_disableAllPastPlayers(g);
 
   TimeIndex index = *worldIndex;
   index.timeDoneTo = -1;
 
   Action spawnAction;
-  while (timeline_nextAction(tb, ma, &index, &spawnAction)) {
+  while (timeline_nextAction(tb, &index, &spawnAction)) {
     if (spawnAction.type != SPAWN || spawnAction.common.jumpID == index.jumpID) {
       continue;
     }
@@ -308,7 +309,7 @@ void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* 
     Action lastMove = spawnAction;
     Action jumpAction;
     uint64 seq = spawnAction.common.sequence + 1;
-    while (timeline_actionInSequence(tb, ma, seq, &jumpAction)) {
+    while (timeline_actionInSequence(tb, seq, &jumpAction)) {
       seq += 1;
 
       if (jumpAction.type == MOVE) {
@@ -335,7 +336,7 @@ void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* 
         continue;
       }
 
-      pastPlayer_init(&g->pastPlayers[id], tb, worldIndex, ma, lastMove);
+      pastPlayer_init(&g->pastPlayers[id], tb, worldIndex, lastMove);
     }
   }
 }
@@ -343,18 +344,17 @@ void gameState_spawnNecessaryPastPlayers(GameState *g, Timeline* tb, TimeIndex* 
 void gameState_timeJump(GameState *g, int64 destination) {
   Timeline* tb = &g->timeline;
   TimeIndex* index = &g->timeIndex;
-  MemoryArena* ma = &lornockData->actionsArena;
 
-  timeline_add(tb, index, ma, action_makeJump(destination));
+  timeline_add(tb, index, action_makeJump(destination));
   index->jumpID += 1;
 
-  timeline_commit(tb, ma);
+  timeline_commit(tb);
 
   index->time = index->timeDoneTo = destination;
 
-  timeline_add(tb, index, ma, action_makeSpawn(g->playerPos));
+  timeline_add(tb, index, action_makeSpawn(g->playerPos));
 
-  gameState_spawnNecessaryPastPlayers(g, tb, index, ma);
+  gameState_spawnNecessaryPastPlayers(g, tb, index);
 }
 
 void gameState_update(State *state) {
@@ -365,7 +365,7 @@ void gameState_update(State *state) {
     g->timelineNextTickTime = getTime() + TIMELINE_TICK_MS_INTERVAL;
 
     Action a;
-    while (timeline_nextAction(tb, &lornockData->actionsArena, &g->timeIndex, &a)) {
+    while (timeline_nextAction(tb, &g->timeIndex, &a)) {
       switch (a.type) {
         case SPAWN:
           {
@@ -377,7 +377,7 @@ void gameState_update(State *state) {
               continue;
             }
 
-            pastPlayer_init(&g->pastPlayers[id], tb, &g->timeIndex, &lornockData->actionsArena, a);
+            pastPlayer_init(&g->pastPlayers[id], tb, &g->timeIndex, a);
           } break;
         default:
           {
@@ -393,7 +393,7 @@ void gameState_update(State *state) {
       continue;
     }
 
-    pastPlayer_update(&g->pastPlayers[i], tb, &g->timeIndex, &lornockData->actionsArena);
+    pastPlayer_update(&g->pastPlayers[i], tb, &g->timeIndex);
   }
 
   gameState_setFaceDirections(g);
@@ -408,7 +408,7 @@ void gameState_update(State *state) {
 
   if (keyJustDown(KEY_l)) {
     logln("saving!");
-    timeline_save(tb, g->timeIndex, &lornockData->actionsArena);
+    timeline_save(tb, g->timeIndex);
   }
 
   if (g->rotating) {
@@ -467,7 +467,7 @@ void gameState_update(State *state) {
     g->playerPos += move * dt * speed;
 
     if (!vec3AlmostEqual(move, g->playerLastMove)) {
-      timeline_add(tb, &g->timeIndex, &lornockData->actionsArena, action_makeMove(g->playerPos));
+      timeline_add(tb, &g->timeIndex, action_makeMove(g->playerPos));
 
       g->playerLastMove = move;
     }

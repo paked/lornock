@@ -13,7 +13,7 @@ Todo:
   - Change loadFromFile interface to load file into provided data
 - Remove all references to transient arena, instead access through TempArena
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
-- Store a MemoryArena inside a `Timeline` struct, and actually use it
+- Refactor code to use Quaternions 100% of the time
 
 In progress:
 - [ ] Add items to the world which can be picked up and placed in inventory
@@ -38,9 +38,9 @@ In progress:
   - [x] Refactor code into self contained chunks
   - [x] Create player as a "point" which can traverse the chunk
   - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
-  - [ ] Refactor code to use Quaternions 100% of the time
 
 Done:
+- [x] Store a MemoryArena inside a `Timeline` struct, and actually use it
 - [x] Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - [x] Make time jumps not have to access the disk.
   - Write ActionChunks into a temporary arena
