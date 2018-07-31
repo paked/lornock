@@ -8,7 +8,8 @@ enum ActionType {
   NONE,
   MOVE,
   JUMP,
-  SPAWN
+  SPAWN,
+  TOUCH
 };
 
 struct CommonAction {
@@ -33,6 +34,16 @@ struct SpawnAction {
   vec3 pos;
 };
 
+struct TouchAction {
+  ACTION_COMMON_FIELDS;
+
+  bool place;
+
+  uint32 face;
+  int x;
+  int y;
+}
+
 struct Action {
   uint32 type;
 
@@ -41,8 +52,20 @@ struct Action {
     SpawnAction spawn;
     MoveAction move;
     JumpAction jump;
+    TouchAction touch;
   };
 };
+
+Action action_makeTouch(bool place, uint32 face, int x, int y) {
+  Action a;
+
+  a.type = TOUCH;
+  a.touch.face = face;
+  a.touch.x = x;
+  a.touch.y = y;
+
+  return a;
+}
 
 Action action_makeMove(vec3 pos) {
   Action a;
@@ -85,6 +108,10 @@ void action_print(Action a) {
       {
         logfln("SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
       } break;
+    case TOUCH:
+      {
+        logfln("TOUCH t=%ld s=%lu j=%lu face=%d x=%d y=%d", a.common.time, a.common.sequence, a.common.jumpID, a.touch.face, a.touch.x, a.touch.y);
+      } break;
     default:
       {
         // well shit
@@ -107,6 +134,10 @@ void action_serialize(Action a, char* out) {
     case SPAWN:
       {
         snprintf(line, 256, "SPAWN t=%ld s=%lu j=%lu pos=(%f,%f,%f)\n", a.common.time, a.common.sequence, a.common.jumpID, a.spawn.pos.x, a.spawn.pos.y, a.spawn.pos.z);
+      } break;
+    case TOUCH:
+      {
+        snprintf(line, 256, "TOUCH t=%ld s=%lu j=%lu face=%d x=%d y=%d\n", a.common.time, a.common.sequence, a.common.jumpID, a.touch.face, a.touch.x, a.touch.y);
       } break;
     default:
       {
@@ -161,6 +192,12 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
     actionJump = &a.common.jumpID;
   } else if (strcmp("SPAWN", actionName) == 0) {
     a.type = a.spawn.type = SPAWN;
+
+    actionTime = &a.common.time;
+    actionSequence = &a.common.sequence;
+    actionJump = &a.common.jumpID;
+  } else if (strcmp("TOUCH", actionName) == 0) {
+    a.type = a.spawn.type = TOUCH;
 
     actionTime = &a.common.time;
     actionSequence = &a.common.sequence;
@@ -221,6 +258,12 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
 
             continue;
           }
+        } break;
+      case TOUCH:
+        {
+          if (strcmp("face", paramName) == 0) {
+          
+          } else if (
         } break;
       default:
         {
