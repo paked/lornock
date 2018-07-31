@@ -405,9 +405,8 @@ enum RenderMode {
 
 void gameState_render(GameState *g, RenderMode m) {
   vec3 lightColor = vec3_one;
-  float t = deg2Rad(getTime()/20.0f);
-  // vec3 lightPos = vec3(0.0f, 8.0f, -5.0f);
-  vec3 lightPos = vec3(sin(t)*10, 4, cos(t)*10);
+
+  vec3 lightPos = vec3(8.0f, 8.0f, -5.0f);
 
   mat4 lightView = mat4LookAt(mat4d(1.0f), lightPos, vec3(0.0f, 0.0f, 0.0f));
   mat4 lightProjection = mat4Orthographic(-10.0f, 10.0f, -10.0f, 10.0f, 0.0f, 100.0f);
@@ -451,6 +450,8 @@ void gameState_render(GameState *g, RenderMode m) {
     draw.projection = lightProjection;
 
     draw_setShader(shader(SHADER_depth));
+
+    return;
   } else {
     ensure(false);
   }

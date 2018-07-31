@@ -249,20 +249,16 @@ void timeline_save(Timeline* tb, TimeIndex worldIndex) {
 }
 
 void timeline_add(Timeline* tb, TimeIndex* index, Action a) {
-  if (tb->toWrite.count >= ACTION_CHUNK_MAX) {
-    logln("flushing buffer!");
-
-    timeline_commit(tb);
-
-    tb->toWrite.count = 0;
-  }
-
   index->sequence += 1;
   a.common.time = index->time;
   a.common.sequence = index->sequence;
   a.common.jumpID = index->jumpID;
 
-  ensure(actionChunk_add(&tb->toWrite, a));
+  if (!actionChunk_add(&tb->toWrite, a)) {
+    timeline_commit(tb);
+
+    ensure(actionChunk_add(&tb->toWrite, a));
+  }
 }
 
 bool timeline_nextActionInSequence(Timeline* tb, uint64 sequence, Action *a) {
