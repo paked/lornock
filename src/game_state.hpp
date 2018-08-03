@@ -83,8 +83,8 @@ vec3 faceCardinalDirections[MAX_FACE][MAX_DIRECTION] = {
 };
 
 quat faceRotations[MAX_FACE] = {
-  quatFromAngleAxis(270.0f, vec3_right), // Front
-  quatFromAngleAxis(90.0f, vec3_right), // Back
+  quatFromAngleAxis(270.0f, vec3_right), // Back
+  quatFromAngleAxis(90.0f, vec3_right), // Front
 
   quatFromAngleAxis(270.0f, vec3_forward), // Left
   quatFromAngleAxis(90.0f, vec3_forward), // Right
@@ -162,3 +162,9 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
     *len += 1;
   }
 }
+
+enum {
+  BLOCK_NONE,
+  BLOCK_ROCK,
+  BLOCK_COAL
+};

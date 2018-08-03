@@ -12,6 +12,7 @@ struct TimeIndex {
   uint64 point;
 };
 
+// TODO(harrison): convert this into the `TimeIndex timeIndex_init()` form.
 void timeIndex_init(TimeIndex* index) {
   index->time = 0;
   index->sequence = index->jumpID = 0;
@@ -21,6 +22,29 @@ void timeIndex_init(TimeIndex* index) {
 }
 
 typedef uint8 Environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
+
+void environment_copy(Environment* from, Environment* to) {
+  memcpy(to, from, sizeof(uint8) * MAX_FACE * WORLD_HEIGHT * WORLD_WIDTH);
+}
+
+void environment_handle(Environment* e, bool place, uint32 face, int x, int y) {
+  ensure(
+      (face >= BACK && face < MAX_FACE) &&
+      (x >= 0 && x < WORLD_WIDTH) &&
+      (y >= 0 && y < WORLD_HEIGHT));
+
+  uint8* ptr = *(*(*e + face) + y) + x;
+
+  if (place) {
+    *ptr = BLOCK_COAL;
+  } else {
+    *ptr = BLOCK_NONE;
+  }
+}
+
+void environment_handle(Environment* e, TouchAction ta) {
+  environment_handle(e, ta.place, ta.face, ta.x, ta.y);
+}
 
 struct TimelineInfo {
   Environment initialState;
@@ -72,7 +96,6 @@ void timeline_create(Timeline* tb) {
     for (int face = 0; face < MAX_FACE; face++) {
       for (int y = 0; y < WORLD_HEIGHT; y++) {
         for (int x = 0; x < WORLD_WIDTH; x++) {
-
           tb->info.initialState[face][y][x] = ((real32)rand() / (real32)RAND_MAX) > 0.6f ? 1 : 0;
         }
       }
@@ -368,4 +391,22 @@ bool timeline_findLastAction(Timeline* tb, Action* a) {
   *a = latest;
 
   return found;
+}
+
+void timeline_getEnvironmentStateAt(Timeline *tb, Environment* env, int64 time) {
+  environment_copy(&tb->info.initialState, env);
+
+  TimeIndex index;
+  timeIndex_init(&index);
+
+  index.time = time;
+
+  Action a;
+  while (timeline_nextAction(tb, &index, &a)) {
+    if (a.type != TOUCH) {
+      continue;
+    }
+
+    environment_handle(env, a.touch);
+  }
 }

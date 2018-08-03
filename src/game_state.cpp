@@ -4,12 +4,6 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
-enum {
-  BLOCK_NONE,
-  BLOCK_ROCK,
-  BLOCK_COAL
-};
-
 struct GameState {
   TimeIndex timeIndex;
   uint64 timelineNextTickTime;
@@ -33,6 +27,8 @@ struct GameState {
   real32 rotatingYawEnd;
   real32 rotatingRollEnd;
   quat rotatingStart;
+
+  Environment environment;
 
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
@@ -213,8 +209,6 @@ void gameState_init(State* state) {
 
     ensure(timeline_findLastAction(&g->timeline, &a));
 
-    action_print(a);
-
     g->timeIndex.time = g->timeIndex.timeDoneTo = a.common.time;
     g->timeIndex.sequence = a.common.sequence;
     g->timeIndex.jumpID = a.common.jumpID;
@@ -232,20 +226,28 @@ void gameState_init(State* state) {
       current -= 1;
     }
 
-    if (found) {
-      if (a.common.type == MOVE) {
-        g->playerPos = a.move.pos;
-      } else if (a.common.type == SPAWN) {
-        g->playerPos = a.spawn.pos;
-      }
+    ensure(found);
 
-      logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
-    } else {
-      logln("ERROR: COULD NOT FIND THE LAST ACTION, AND AM SUBSEQUENTLY UNABLET O SET THE POSITION OF THE PLAYER PROPERLY.");
+    if (a.common.type == MOVE) {
+      g->playerPos = a.move.pos;
+    } else if (a.common.type == SPAWN) {
+      g->playerPos = a.spawn.pos;
     }
+
+    logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
   }
 
   gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
+
+  timeline_getEnvironmentStateAt(&g->timeline, &g->environment, g->timeIndex.time);
+
+  for (int f = 0; f < MAX_FACE; f++) {
+    for (int y = 0; y < WORLD_HEIGHT; y++) {
+      for (int x = 0; x < WORLD_WIDTH; x++) {
+        logfln("elem: %d", g->environment[f][y][x]);
+      }
+    }
+  }
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -384,10 +386,11 @@ void gameState_timeJump(GameState *g, int64 destination) {
   timeline_add(tb, index, action_makeSpawn(g->playerPos));
 
   gameState_spawnNecessaryPastPlayers(g, tb, index);
+  timeline_getEnvironmentStateAt(tb, &g->environment, index->time);
 }
 
 void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
-  uint8 v = g->timeline.info.initialState[face][y][x];
+  uint8 v = g->environment[face][y][x];
 
   bool place = true;
 
@@ -397,7 +400,7 @@ void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
 
   timeline_add(&g->timeline, &g->timeIndex, action_makeTouch(place, face, x, y));
 
-  g->timeline.info.initialState[face][y][x] = (place ? BLOCK_COAL : BLOCK_NONE);
+  environment_handle(&g->environment, place, face, x, y);
 }
 
 enum RenderMode {
@@ -509,7 +512,7 @@ void gameState_render(GameState *g, RenderMode m) {
 
       for (int y = 0; y < WORLD_HEIGHT; y++) {
         for (int x = 0; x < WORLD_WIDTH; x++) {
-          uint32 type = g->timeline.info.initialState[f][y][x];
+          uint32 type = g->environment[f][y][x];
           if (type == BLOCK_NONE) {
             continue;
           }
@@ -570,8 +573,13 @@ void gameState_update(State *state) {
 
             pastPlayer_init(&g->pastPlayers[id], tb, &g->timeIndex, a);
           } break;
+        case TOUCH:
+          {
+            environment_handle(&g->environment, a.touch);
+          } break;
         default:
           {
+            // we don't need to do anything!
           } break;
       }
     }
