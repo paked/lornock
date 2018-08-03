@@ -389,13 +389,15 @@ void gameState_timeJump(GameState *g, int64 destination) {
 void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
   uint8 v = g->timeline.info.initialState[face][y][x];
 
-  if (v == BLOCK_NONE) {
-    v = BLOCK_COAL;
-  } else {
-    v = BLOCK_NONE;
+  bool place = true;
+
+  if (v != BLOCK_NONE) {
+    place = false;
   }
 
-  g->timeline.info.initialState[face][y][x] = v;
+  timeline_add(&g->timeline, &g->timeIndex, action_makeTouch(place, face, x, y));
+
+  g->timeline.info.initialState[face][y][x] = (place ? BLOCK_COAL : BLOCK_NONE);
 }
 
 enum RenderMode {

@@ -42,7 +42,7 @@ struct TouchAction {
   uint32 face;
   int x;
   int y;
-}
+};
 
 struct Action {
   uint32 type;
@@ -60,6 +60,7 @@ Action action_makeTouch(bool place, uint32 face, int x, int y) {
   Action a;
 
   a.type = TOUCH;
+  a.touch.place = place;
   a.touch.face = face;
   a.touch.x = x;
   a.touch.y = y;
@@ -110,7 +111,7 @@ void action_print(Action a) {
       } break;
     case TOUCH:
       {
-        logfln("TOUCH t=%ld s=%lu j=%lu face=%d x=%d y=%d", a.common.time, a.common.sequence, a.common.jumpID, a.touch.face, a.touch.x, a.touch.y);
+        logfln("TOUCH t=%ld s=%lu j=%lu place=%d face=%d x=%d y=%d", a.common.time, a.common.sequence, a.common.jumpID, a.touch.place, a.touch.face, a.touch.x, a.touch.y);
       } break;
     default:
       {
@@ -137,7 +138,7 @@ void action_serialize(Action a, char* out) {
       } break;
     case TOUCH:
       {
-        snprintf(line, 256, "TOUCH t=%ld s=%lu j=%lu face=%d x=%d y=%d\n", a.common.time, a.common.sequence, a.common.jumpID, a.touch.face, a.touch.x, a.touch.y);
+        snprintf(line, 256, "TOUCH t=%ld s=%lu j=%lu place=%d face=%d x=%d y=%d\n", a.common.time, a.common.sequence, a.common.jumpID, a.touch.place, a.touch.face, a.touch.x, a.touch.y);
       } break;
     default:
       {
@@ -197,7 +198,7 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
     actionSequence = &a.common.sequence;
     actionJump = &a.common.jumpID;
   } else if (strcmp("TOUCH", actionName) == 0) {
-    a.type = a.spawn.type = TOUCH;
+    a.type = a.touch.type = TOUCH;
 
     actionTime = &a.common.time;
     actionSequence = &a.common.sequence;
@@ -262,8 +263,18 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
       case TOUCH:
         {
           if (strcmp("face", paramName) == 0) {
-          
-          } else if (
+            sscanf(paramValue, "%d", &a.touch.face);
+          } else if (strcmp("x", paramName) == 0) {
+            sscanf(paramValue, "%d", &a.touch.x);
+          } else if (strcmp("y", paramName) == 0) {
+            sscanf(paramValue, "%d", &a.touch.y);
+          } else if (strcmp("place", paramName) == 0) {
+            int temp;
+            sscanf(paramValue, "%d", &temp);
+
+            a.touch.place = temp;
+          }
+
         } break;
       default:
         {
