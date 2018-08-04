@@ -1,10 +1,13 @@
 @echo off
 
+REM copy data files.
+xcopy ..\data data /s/h/e/k/f/c
+
 set SDL2PATH=C:\dev\SDL2-2.0.8
 set SDL2LIBS=SDL2.lib SDL2main.lib
 
 set common_compiler_flags=-nologo -Gm- -GR- -EHa- -Od /Zi /I ..\src
-set common_linker_flags=/OPT:REF /INCREMENTAL:NO
+set common_linker_flags=/DEBUG /INCREMENTAL:NO
 
 IF NOT EXIST .\build mkdir .\build
 
