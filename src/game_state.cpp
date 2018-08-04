@@ -240,14 +240,6 @@ void gameState_init(State* state) {
   gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
 
   timeline_getEnvironmentStateAt(&g->timeline, &g->environment, g->timeIndex.time);
-
-  for (int f = 0; f < MAX_FACE; f++) {
-    for (int y = 0; y < WORLD_HEIGHT; y++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
-        logfln("elem: %d", g->environment[f][y][x]);
-      }
-    }
-  }
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -639,7 +631,7 @@ void gameState_update(State *state) {
       g->timeline.info.forward = g->playerForward;
     }
   } else {
-    real32 speed = 2.0f;
+    real32 speed = 3.0f;
     real32 dt = getDt();
 
     vec3 right = g->playerRight;

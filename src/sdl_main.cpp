@@ -139,9 +139,15 @@ void showErrorBox(const char* title, const char* fmt, ...) {
 }
 
 void toggleFullscreen() {
-  if (SDL_SetWindowFullscreen(window, platform.fullscreen ? 0 : SDL_WINDOW_FULLSCREEN) != 0) {
+  if (SDL_SetWindowFullscreen(window, platform.fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
     logfln("ERROR: Could not toggle window fullscreen: %s", SDL_GetError());
+
+    return;
   }
+
+  logln("toggled fullscreen");
+
+  platform.fullscreen = !platform.fullscreen;
 }
 
 // Key conversion
