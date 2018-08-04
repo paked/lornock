@@ -4,6 +4,10 @@ void* win32_allocateMemory(uint64 size) {
   return VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 }
 
+bool win32_freeMemory(void* addr, MemoryIndex size) {
+  return VirtualFree(addr, size, MEM_DECOMMIT);
+}
+
 void win32_writeToFile(const char *path, void *data, int64 data_len) {
     HANDLE file = {};
     char error_msg[64] = {};
@@ -20,8 +24,7 @@ void win32_writeToFile(const char *path, void *data, int64 data_len) {
         DWORD flags_and_attributes = 0;
         HANDLE template_file = 0;
         
-        if((file = CreateFile(path, desired_access, share_mode, &security_attributes, creation_disposition, flags_and_attributes, template_file)) != INVALID_HANDLE_VALUE) { 
-            
+        if((file = CreateFile(path, desired_access, share_mode, &security_attributes, creation_disposition, flags_and_attributes, template_file)) != INVALID_HANDLE_VALUE) {
             void *data_to_write = data;
             DWORD data_to_write_size = (DWORD)data_len;
             DWORD bytes_written = 0;
@@ -94,7 +97,7 @@ bool win32_getFileTime(const char* fname, FILETIME* ft) {
   return true;
 }
 
-const char* win32_libPath = "Debug\\lornock.dll";
+const char* win32_libPath = "lornock.dll";
 
 bool win32_libValid = false;
 FILETIME win32_libFileTime = {0};

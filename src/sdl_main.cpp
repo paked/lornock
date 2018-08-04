@@ -46,6 +46,7 @@ GameLibCleanFunction gameLibCleanFunction;
 
 // Implemented
 #define ALLOCATE_MEMORY_FUNC win32_allocateMemory
+#define FREE_MEMORY_FUNC win32_freeMemory
 
 // Stubbed
 #define LOAD_FROM_FILE_FUNC win32_loadFromFile
