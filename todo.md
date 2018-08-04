@@ -3,10 +3,8 @@
 Todo:
 
 - Make billboarding work on a per face basis
-- Save rotation and current face in camera state (maybe write a proper meta file)
 - Refactor camera into camera struct
-- Have things on the world
-  - Have things on the world which change over time
+- Have things on the world which change over time
 - Fix number keys not triggering input events
 - Hot reloading for assets
 - Create "assets" memory pool which can dynamically grow, and will release files when they're not needed
@@ -16,23 +14,22 @@ Todo:
 - Refactor code to use Quaternions 100% of the time
 
 In progress:
+- [ ] Remove cmake
+  - [x] Create non-cmake build script for Windows
+  - [ ] Create non-cmake build script for Linux
 - [ ] Add items to the world which can be picked up and placed in inventory
   - [x] Create serializer, with easy way to swap out implementations (ie. binary vs debug plaintext)
   - [x] Create "world info" structure, which gets serialized, loaded etc.
     - [x] Serialize camera position and rotation
     - [x] Serialize initial state of the environment
-  - Add ability for player to destroy environment, serialize this
+  - [x] Add ability for player to interact with environment put this into timeline
+  - [ ] Create player inventory
 - [ ] Create basic UI library
   - [x] Render rectangle
   - [x] Render icons
   - [x] Create toolbar
   - [ ] Render text
   - [ ] Create UI for time jump
-- [ ] Windows support
-  - [x] Split linux platform code into separate file
-  - [x] Create "interface" which needs to be implemented by new platforms
-  - [x] Get windows compiling
-  - [ ] Write win32 platform code
 - [ ] Fix the whole billboarding/camera rotation shenangian
   - _HOLY FUCK I'VE SPENT LIKE A WEEK ON THIS SHIT._
   - [x] Refactor code into self contained chunks
@@ -40,6 +37,11 @@ In progress:
   - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
 
 Done:
+- [x] Windows support
+  - [x] Split linux platform code into separate file
+  - [x] Create "interface" which needs to be implemented by new platforms
+  - [x] Get windows compiling
+  - [x] Write win32 platform code
 - [x] Store a MemoryArena inside a `Timeline` struct, and actually use it
 - [x] Create assert alternative `ensure`, which will make a SDL pop up window occur.
 - [x] Make time jumps not have to access the disk.
