@@ -168,7 +168,7 @@ uint32 keySDLToPlatform(SDL_KeyboardEvent event) {
   } else if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
     key = KEY_a + (scancode - SDL_SCANCODE_A);
   } else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_0) {
-    key = KEY_0 + (scancode - SDL_SCANCODE_1);
+    key = KEY_1 + (scancode - SDL_SCANCODE_1);
   }
 
   return key;

@@ -5,7 +5,6 @@ Todo:
 - Make billboarding work on a per face basis
 - Refactor camera into camera struct
 - Have things on the world which change over time
-- Fix number keys not triggering input events
 - Hot reloading for assets
 - Create "assets" memory pool which can dynamically grow, and will release files when they're not needed
   - Change loadFromFile interface to load file into provided data
@@ -37,6 +36,7 @@ In progress:
   - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
 
 Done:
+- Fix number keys not triggering input events
 - [x] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
