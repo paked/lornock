@@ -163,8 +163,11 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   }
 }
 
-enum {
+enum BlockType {
   BLOCK_NONE,
   BLOCK_ROCK,
   BLOCK_COAL
 };
+
+#define INVENTORY_SIZE 9
+typedef uint32 Inventory[INVENTORY_SIZE];

@@ -30,6 +30,8 @@ struct GameState {
 
   Environment environment;
 
+  uint8 inventoryCurrentSlot;
+
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
@@ -237,9 +239,13 @@ void gameState_init(State* state) {
     logfln("starting at: %f %f %f", a.move.pos.x, a.move.pos.y, a.move.pos.z);
   }
 
-  gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
+  {
+    gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
 
-  timeline_getEnvironmentStateAt(&g->timeline, &g->environment, g->timeIndex.time);
+    timeline_getEnvironmentStateAt(&g->timeline, &g->environment, g->timeIndex.time);
+
+    g->inventoryCurrentSlot = 0;
+  }
 }
 
 void gameState_rotate(GameState* g, uint32 direction) {
@@ -381,6 +387,18 @@ void gameState_timeJump(GameState *g, int64 destination) {
   timeline_getEnvironmentStateAt(tb, &g->environment, index->time);
 }
 
+bool gameState_pickup(GameState* g, uint32 item) {
+  for (int i = 0; i < INVENTORY_SIZE; i++) {
+    if (g->timeline.info.inventory[i] == BLOCK_NONE) {
+      g->timeline.info.inventory[i] = item;
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
   uint8 v = g->environment[face][y][x];
 
@@ -389,6 +407,8 @@ void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
   if (v != BLOCK_NONE) {
     place = false;
   }
+
+  gameState_pickup(g, v);
 
   timeline_add(&g->timeline, &g->timeIndex, action_makeTouch(place, face, x, y));
 
@@ -437,6 +457,9 @@ void gameState_render(GameState *g, RenderMode m) {
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, g->shadowMap);
+
+    glEnable(GL_BLEND); 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   } else if (m == RENDER_MODE_LIGHT) {
     glViewport(0, 0, 1024, 1024);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -521,23 +544,42 @@ void gameState_render(GameState *g, RenderMode m) {
   }
 
   if (m == RENDER_MODE_NORMAL) {
+    draw_2d_begin();
+    ui_begin();
+
     {
-      draw_2d_begin();
-      ui_begin();
+      ui_toolbarBegin(uiid_gen());
 
-      {
-        ui_toolbarBegin(uiid_gen());
+      for (int i = 0; i < INVENTORY_SIZE; i++) {
+        uint32 tex = MAX_TEXTURE;
 
-        ui_toolbarOption(uiid_gen(), false, TEXTURE_rock_icon);
-        ui_toolbarOption(uiid_gen(), false);
-        ui_toolbarOption(uiid_gen(), false);
+        uint32 item = g->timeline.info.inventory[i];
 
-        ui_toolbarEnd();
+        switch (item) {
+          case BLOCK_ROCK:
+            {
+              tex = TEXTURE_rock_icon;
+            } break;
+          case BLOCK_COAL:
+            {
+              tex = TEXTURE_coal_icon;
+            } break;
+          default:
+            {
+              tex = MAX_TEXTURE;
+            } break;
+        }
+
+        ui_toolbarOption(
+            uiid_genEx(i),
+            i == g->inventoryCurrentSlot,
+            tex);
       }
 
-      ui_end();
-
+      ui_toolbarEnd();
     }
+
+    ui_end();
 
     ui_draw();
   }
@@ -588,6 +630,14 @@ void gameState_update(State *state) {
   }
 
   gameState_setFaceDirections(g);
+
+  for (int i = 0; i < 9; i++) {
+    uint32 k = KEY_1 + i;
+
+    if (keyJustDown(k)) {
+      g->inventoryCurrentSlot = i;
+    }
+  }
 
   if (keyJustDown(KEY_tab)) {
     gameState_timeJump(g, 2);

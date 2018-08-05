@@ -1,8 +1,11 @@
 struct UIID {
   uint32 line;
+
+  int id;
 };
 
 #define uiid_gen() uiid_init(__LINE__)
+#define uiid_genEx(i) uiid_init(__LINE__, i)
 
 UIID uiid_init(uint32 line) {
   UIID id = {0};
@@ -11,8 +14,16 @@ UIID uiid_init(uint32 line) {
   return id;
 }
 
+UIID uiid_init(uint32 line, int i) {
+  UIID id = uiid_init(line);
+
+  id.id = i;
+
+  return id;
+}
+
 bool operator==(UIID l, UIID r) {
-  return l.line == r.line;
+  return l.line == r.line && l.id == r.id;
 }
 
 enum {
@@ -108,7 +119,7 @@ void ui_toolbarEnd() {
   ui.parent = 0;
 }
 
-void ui_toolbarOption(UIID id, bool selected, int32 tex=-1) {
+void ui_toolbarOption(UIID id, bool selected, uint32 tex=MAX_TEXTURE) {
   ensure(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
 
   UIElement* e = ui_getElement(id);
@@ -121,7 +132,7 @@ void ui_toolbarOption(UIID id, bool selected, int32 tex=-1) {
     ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
 
-  if (tex == -1) {
+  if (tex == MAX_TEXTURE) {
     e->hasTexture = false;
   } else {
     e->hasTexture = true;
@@ -160,6 +171,10 @@ void ui_draw() {
           UIElement* p = ui_getElement(elem.parent);
 
           vec4 color = vec4(10, 10, 60, 1.0f);
+
+          if (elem.selected) {
+            color = vec4(30, 30, 100, 1.0f);
+          }
 
           elem.rect.x += p->rect.x;
           elem.rect.y += p->rect.y;

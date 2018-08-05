@@ -49,6 +49,11 @@ void environment_handle(Environment* e, TouchAction ta) {
 struct TimelineInfo {
   Environment initialState;
 
+  // TODO(harrison): everything from here down needs to be moved into a
+  // separate `game save` specific struct. it will need to be shared between
+  // timelines.
+  Inventory inventory;
+
   quat camera;
 
   vec3 up;
@@ -71,6 +76,10 @@ void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
   serializer_vec3(s, &tli->up);
   serializer_vec3(s, &tli->right);
   serializer_vec3(s, &tli->forward);
+
+  for (int i = 0; i < INVENTORY_SIZE; i++) {
+    serializer_uint32(s, &tli->inventory[i]);
+  }
 }
 
 struct Timeline {
@@ -108,17 +117,25 @@ void timeline_create(Timeline* tb) {
     tb->info.camera = quatFromPitchYawRoll(90.0f, 0.0f, 0.0f);
   }
 
-  // Generate player
-  ActionChunk* chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
+  // Generate player spawn action
+  {
+    ActionChunk* chunk = memoryArena_pushStruct(tb->arena, ActionChunk);
+    Action a = action_makeSpawn(PLAYER_DEFAULT_SPAWN);
 
-  Action a = action_makeSpawn(PLAYER_DEFAULT_SPAWN);
+    a.common.time = 0;
 
-  a.common.time = 0;
+    a.common.sequence = a.common.jumpID = 0;
 
-  a.common.sequence = a.common.jumpID = 0;
+    chunk->actions[0] = a;
+    chunk->count += 1;
+  }
 
-  chunk->actions[0] = a;
-  chunk->count += 1;
+  // Create inventory
+  {
+    for (int i = 0; i < INVENTORY_SIZE; i++) {
+      tb->info.inventory[i] = BLOCK_NONE;
+    }
+  }
 }
 
 void timeline_load(Timeline* tb, const char* name) {
