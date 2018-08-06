@@ -738,13 +738,16 @@ void gameState_update(State *state) {
     g->playerPos.z = clamp(g->playerPos.z, -1.5f, 1.5f);
 
     if (keyJustDown(KEY_space)) {
-      real32 rx = vec3Sum(g->playerPos * g->playerRight);
-      real32 ry = vec3Sum(g->playerPos * g->playerForward) * -1;
+      int face = gameState_getCurrentFace(g);
+
+      vec3 right = faceCardinalDirections[face][DIRECTION_RIGHT];
+      vec3 forward = faceCardinalDirections[face][DIRECTION_FORWARD];
+
+      real32 rx = vec3Sum(g->playerPos * right);
+      real32 ry = vec3Sum(g->playerPos * forward) * -1;
 
       int x = (int) (rx + 1.5f);
       int y = (int) (ry + 1.5f);
-
-      int face = gameState_getCurrentFace(g);
 
       gameState_touchEnvironment(g, face, x, y);
     }
