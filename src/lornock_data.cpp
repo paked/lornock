@@ -15,10 +15,13 @@ struct LornockData {
 #define assets_releaseTexture(i) lornockData->assets.textureRequests[i]--
 #define assets_requestModel(i) lornockData->assets.modelRequests[i]++
 #define assets_releaseModel(i) lornockData->assets.modelRequests[i]--
+#define assets_requestFont(i) lornockData->assets.fontRequests[i]++
+#define assets_releaseFont(i) lornockData->assets.fontRequests[i]--
 
 #define shader(i) lornockData->assets.shaders[i]
 #define texture(i) lornockData->assets.textures[i]
 #define model(i) lornockData->assets.models[i]
+#define font(i) lornockData->assets.fonts[i]
 
 void lornockData_assetsUpdate() {
   for (uint32 i = 0; i < MAX_SHADER; i++) {
@@ -65,6 +68,22 @@ void lornockData_assetsUpdate() {
         logln("Destroyed model");
 
         model_clean(&model(i));
+      }
+    }
+  }
+
+  for (uint32 i = 0; i < MAX_FONT; i++) {
+    if (lornockData->assets.fontRequests[i] > 0) {
+      if (font(i).texture.id == 0) {
+        logln("Created font");
+
+        font(i) = font_load(fontFilename(i));
+      }
+    } else {
+      if (font(i).texture.id != 0)  {
+        logln("Destroyed font");
+
+        font_clean(&font(i));
       }
     }
   }

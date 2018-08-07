@@ -19,6 +19,13 @@ enum {
 #undef model
 };
 
+enum {
+#define font(name) FONT_ ##name,
+#include <assets_fonts.cpp>
+#undef font
+  MAX_FONT
+};
+
 const char* shaderFilenames[MAX_SHADER] = {
 #define shader(name) #name,
 #include <assets_shaders.cpp>
@@ -55,6 +62,17 @@ const char* modelFilename(uint32 i) {
   return modelFilenames[i];
 }
 
+const char* fontFilenames[MAX_MODEL] = {
+#define font(name) #name,
+#include <assets_fonts.cpp>
+#undef font
+};
+
+const char* fontFilename(uint32 i) {
+  ensure(i >= 0 && i < MAX_MODEL);
+
+  return fontFilenames[i];
+}
 
 struct Shader {
   GLuint id;
@@ -617,6 +635,98 @@ void model_clean(Model* m) {
   ensure(false);
 }
 
+#define FONT_CHARS 94
+struct Font {
+  Texture texture;
+
+  int64 lineHeight;
+
+  int x0[FONT_CHARS];
+  int x1[FONT_CHARS];
+  int y0[FONT_CHARS];
+  int y1[FONT_CHARS];
+
+  real32 xoff[FONT_CHARS];
+  real32 yoff[FONT_CHARS];
+  real32 xadv[FONT_CHARS];
+};
+
+Font font_load(const char* name) {
+  Font f = {0};
+
+  char infoFilename[64];
+  snprintf(infoFilename, 64, "data/font/%s.fnt", name);
+
+  char pngFilename[64];
+  snprintf(pngFilename, 64, "data/font/%s.png", name);
+
+  {
+    void* pngData;
+    uint32 pngLen;
+
+    loadFromFile(pngFilename, &pngData, &pngLen);
+
+    stbi_set_flip_vertically_on_load(false);
+    f.texture = texture_init(pngData, pngLen);
+    stbi_set_flip_vertically_on_load(true);
+  }
+
+  {
+    void* metaData;
+    uint32 metaLen;
+
+    loadFromFile(infoFilename, &metaData, &metaLen);
+
+    char* meta = (char*) metaData;
+
+    char* line = (char*) lornockMemory->transientStorage;
+    uint32 lineLen = 0;
+
+    uint32 rawUpTo = 0;
+
+    bool firstLine = true;
+
+    while (rawUpTo < metaLen) {
+      getLine(line, &lineLen, &rawUpTo, meta, metaLen);
+      rawUpTo += 1;
+
+      if (firstLine) {
+        ensure(sscanf(line, "lh %ld", &f.lineHeight) == 1);
+
+        firstLine = false;
+
+        continue;
+      }
+
+      int id = 0;
+
+      ensure(sscanf(line, "id %d", &id) == 1);
+
+      id -= 32;
+
+      ensure(sscanf(line,
+            "id %*d x0 %d y0 %d x1 %d y1 %d xoff %f yoff %f xadv %f",
+            &f.x0[id], &f.y0[id],
+            &f.x1[id], &f.y1[id],
+            &f.xoff[id], &f.yoff[id],
+            &f.xadv[id]
+            ) == 7);
+
+      if (id == 95) {
+        break;
+      }
+    }
+  }
+
+  return f;
+}
+
+void font_clean(Font* f) {
+  // TODO: fill
+
+  ensure(false);
+}
+
 struct Assets {
   int32 shaderRequests[MAX_SHADER];
   Shader shaders[MAX_SHADER];
@@ -626,4 +736,7 @@ struct Assets {
 
   int32 modelRequests[MAX_MODEL];
   Model models[MAX_MODEL];
+
+  int32 fontRequests[MAX_FONT];
+  Font fonts[MAX_FONT];
 };

@@ -3,3 +3,4 @@ shader(depth)
 
 shader(rectangle)
 shader(sprite)
+shader(text)

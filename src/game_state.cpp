@@ -189,6 +189,7 @@ void gameState_init(State* state) {
   assets_requestShader(SHADER_default);
   assets_requestShader(SHADER_depth);
 
+  assets_requestShader(SHADER_text);
   assets_requestShader(SHADER_sprite);
   assets_requestShader(SHADER_rectangle);
 
@@ -204,6 +205,8 @@ void gameState_init(State* state) {
 
   assets_requestModel(MODEL_rock);
   assets_requestModel(MODEL_coal);
+
+  assets_requestFont(FONT_quicksand_regular);
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
@@ -588,6 +591,9 @@ void gameState_render(GameState *g, RenderMode m) {
 
   if (m == RENDER_MODE_NORMAL) {
     draw_2d_begin();
+
+    draw_text((char*)"hello world", vec2(100, 100), 1.0f, font(FONT_quicksand_regular));
+
     ui_begin();
 
     {

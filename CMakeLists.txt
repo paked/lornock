@@ -56,11 +56,16 @@ set(DATA_FILES
     data/shaders/depth.vert
     data/shaders/depth.frag
 
+    data/font/quicksand_regular.png
+    data/font/quicksand_regular.fnt
+
     # 2D
     data/shaders/rectangle.vert
     data/shaders/rectangle.frag
     data/shaders/sprite.vert
     data/shaders/sprite.frag
+    data/shaders/text.vert
+    data/shaders/text.frag
 
     data/mesh/rock.obj
     data/mesh/coal.obj

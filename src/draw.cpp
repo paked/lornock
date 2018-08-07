@@ -156,6 +156,60 @@ void draw_sprite(Rect rect, Texture t) {
   glBindVertexArray(0);
 }
 
+void draw_text(char* text, vec2 pos, real32 scale, Font f) {
+  Shader oldShader = draw.activeShader;
+
+  {
+    draw_setShader(shader(SHADER_text));
+
+    shader_setMatrix(&draw.activeShader, "projection", draw.projection);
+
+    int i = 0;
+    while (text[i]) {
+      if (text[i] >= 32 && text[i] < 126) {
+        int c = text[i] - 32;
+
+        real32 x = (real32) f.x0[c];
+        real32 y = (real32) f.y0[c];
+
+        real32 w = ((real32) f.x1[c]) - x;
+        real32 h = ((real32) f.y1[c]) - y;
+        
+        vec2 uvOffset = vec2(x / f.texture.w, y / f.texture.h);
+        shader_setVec2(&draw.activeShader, "uv_offset", uvOffset);
+
+        vec2 uvRange = vec2(w / f.texture.w, h / f.texture.h);
+        shader_setVec2(&draw.activeShader, "uv_range", uvRange);
+
+        real32 xOffset = f.xoff[c] * scale;
+        real32 yOffset = f.yoff[c] * scale;
+
+        mat4 model = mat4d(1.0f);
+        model = mat4Translate(model,
+            vec3(pos.x + xOffset, pos.y + yOffset, 0));
+
+        model = mat4Scale(model, vec3(w, h, 1) * scale);
+
+        shader_setMatrix(&draw.activeShader, "model", model);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, f.texture.id);
+
+        glBindVertexArray(draw.quadVAO);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+
+        pos.x += f.xadv[c] * scale;
+      }
+
+      i += 1;
+    }
+  }
+
+  draw_setShader(oldShader);
+}
+
 void draw_3d_mesh(Mesh mesh, mat4 model, Texture t) {
   shader_setMatrix(&draw.activeShader, "model", model);
 
