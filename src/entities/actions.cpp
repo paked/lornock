@@ -37,7 +37,7 @@ struct SpawnAction {
 struct TouchAction {
   ACTION_COMMON_FIELDS;
 
-  bool place;
+  uint32 block;
 
   uint32 face;
   int x;
@@ -56,11 +56,11 @@ struct Action {
   };
 };
 
-Action action_makeTouch(bool place, uint32 face, int x, int y) {
+Action action_makeTouch(uint32 block, uint32 face, int x, int y) {
   Action a;
 
   a.type = TOUCH;
-  a.touch.place = place;
+  a.touch.block = block;
   a.touch.face = face;
   a.touch.x = x;
   a.touch.y = y;
@@ -111,7 +111,7 @@ void action_print(Action a) {
       } break;
     case TOUCH:
       {
-        logfln("TOUCH t=%ld s=%lu j=%lu place=%d face=%d x=%d y=%d", a.common.time, a.common.sequence, a.common.jumpID, a.touch.place, a.touch.face, a.touch.x, a.touch.y);
+        logfln("TOUCH t=%ld s=%lu j=%lu block=%d face=%d x=%d y=%d", a.common.time, a.common.sequence, a.common.jumpID, a.touch.block, a.touch.face, a.touch.x, a.touch.y);
       } break;
     default:
       {
@@ -138,7 +138,7 @@ void action_serialize(Action a, char* out) {
       } break;
     case TOUCH:
       {
-        snprintf(line, 256, "TOUCH t=%ld s=%lu j=%lu place=%d face=%d x=%d y=%d\n", a.common.time, a.common.sequence, a.common.jumpID, a.touch.place, a.touch.face, a.touch.x, a.touch.y);
+        snprintf(line, 256, "TOUCH t=%ld s=%lu j=%lu block=%d face=%d x=%d y=%d\n", a.common.time, a.common.sequence, a.common.jumpID, a.touch.block, a.touch.face, a.touch.x, a.touch.y);
       } break;
     default:
       {
@@ -268,11 +268,8 @@ bool action_parse(Action* action, char* line, uint32 lineLen) {
             sscanf(paramValue, "%d", &a.touch.x);
           } else if (strcmp("y", paramName) == 0) {
             sscanf(paramValue, "%d", &a.touch.y);
-          } else if (strcmp("place", paramName) == 0) {
-            int temp;
-            sscanf(paramValue, "%d", &temp);
-
-            a.touch.place = temp;
+          } else if (strcmp("block", paramName) == 0) {
+            sscanf(paramValue, "%d", &a.touch.block);
           }
 
         } break;

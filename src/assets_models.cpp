@@ -1,1 +1,2 @@
 model(rock)
+model(coal)

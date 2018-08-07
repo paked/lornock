@@ -63,6 +63,7 @@ set(DATA_FILES
     data/shaders/sprite.frag
 
     data/mesh/rock.obj
+    data/mesh/coal.obj
 
     data/img/player.png
     data/img/rock.png

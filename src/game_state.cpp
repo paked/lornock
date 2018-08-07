@@ -203,6 +203,7 @@ void gameState_init(State* state) {
   assets_requestTexture(TEXTURE_coal_albedo);
 
   assets_requestModel(MODEL_rock);
+  assets_requestModel(MODEL_coal);
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
@@ -399,20 +400,44 @@ bool gameState_pickup(GameState* g, uint32 item) {
   return false;
 }
 
+bool gameState_use(GameState* g, uint32 slot) {
+  ensure(slot < INVENTORY_SIZE && slot >= 0);
+
+  if (g->timeline.info.inventory[slot] == 0) {
+    return false;
+  }
+
+  g->timeline.info.inventory[slot] = 0;
+
+  g->inventoryCurrentSlot = (g->inventoryCurrentSlot + 1) % INVENTORY_SIZE;
+
+  return true;
+}
+
 void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
   uint8 v = g->environment[face][y][x];
 
-  bool place = true;
+  uint32 block = v;
 
-  if (v != BLOCK_NONE) {
-    place = false;
+  if (v == BLOCK_NONE) {
+    uint32 i = g->timeline.info.inventory[g->inventoryCurrentSlot];
+
+    if (!gameState_use(g, g->inventoryCurrentSlot)) {
+      logln("nothing in selected inventory slot");
+
+      return;
+    }
+
+    block = i;
+  } else {
+    gameState_pickup(g, v);
+
+    block = BLOCK_NONE;
   }
 
-  gameState_pickup(g, v);
+  timeline_add(&g->timeline, &g->timeIndex, action_makeTouch(block, face, x, y));
 
-  timeline_add(&g->timeline, &g->timeIndex, action_makeTouch(place, face, x, y));
-
-  environment_handle(&g->environment, place, face, x, y);
+  environment_handle(&g->environment, block, face, x, y);
 }
 
 enum RenderMode {
@@ -517,9 +542,9 @@ void gameState_render(GameState *g, RenderMode m) {
     }
   }
 
-  // Draw items
+  // @Items
   {
-    vec3 worldOffset = vec3(-1.5f, 1.3, -1.5f);
+    vec3 worldOffset = vec3(-1.5f, 1.5, -1.5f);
     vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
 
     for (int f = 0; f < MAX_FACE; f++) {
@@ -532,12 +557,30 @@ void gameState_render(GameState *g, RenderMode m) {
             continue;
           }
 
+          uint32 modelID = MAX_MODEL;
+          uint32 textureID = MAX_TEXTURE;
+
+          switch (type) {
+            case BLOCK_ROCK:
+              {
+                modelID = MODEL_rock;
+                textureID = TEXTURE_rock_albedo;
+              } break;
+            case BLOCK_COAL:
+              {
+                modelID = MODEL_coal;
+                textureID = TEXTURE_coal_albedo;
+              } break;
+          }
+
+          ensure(modelID != MAX_MODEL && textureID != MAX_TEXTURE);
+
           mat4 model = mat4d(1.0f);
           model = mat4Translate(model, worldOffset + modelOffset);
           model = mat4Translate(model, vec3(x, 0, y));
           model = face * model;
 
-          draw_3d_model(model(MODEL_rock), model, texture(TEXTURE_rock_albedo));
+          draw_3d_model(model(modelID), model, texture(textureID));
         }
       }
     }

@@ -27,7 +27,7 @@ void environment_copy(Environment* from, Environment* to) {
   memcpy(to, from, sizeof(uint8) * MAX_FACE * WORLD_HEIGHT * WORLD_WIDTH);
 }
 
-void environment_handle(Environment* e, bool place, uint32 face, int x, int y) {
+void environment_handle(Environment* e, uint32 block, uint32 face, int x, int y) {
   ensure(
       (face >= BACK && face < MAX_FACE) &&
       (x >= 0 && x < WORLD_WIDTH) &&
@@ -35,15 +35,11 @@ void environment_handle(Environment* e, bool place, uint32 face, int x, int y) {
 
   uint8* ptr = *(*(*e + face) + y) + x;
 
-  if (place) {
-    *ptr = BLOCK_COAL;
-  } else {
-    *ptr = BLOCK_NONE;
-  }
+  *ptr = block;
 }
 
 void environment_handle(Environment* e, TouchAction ta) {
-  environment_handle(e, ta.place, ta.face, ta.x, ta.y);
+  environment_handle(e, ta.block, ta.face, ta.x, ta.y);
 }
 
 struct TimelineInfo {
