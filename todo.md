@@ -11,24 +11,12 @@ Todo:
 - Remove all references to transient arena, instead access through TempArena
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 - Refactor code to use Quaternions 100% of the time
+- [ ] Create UI for time jump
 
 In progress:
 - [ ] Remove cmake
   - [x] Create non-cmake build script for Windows
   - [ ] Create non-cmake build script for Linux
-- [ ] Add items to the world which can be picked up and placed in inventory
-  - [x] Create serializer, with easy way to swap out implementations (ie. binary vs debug plaintext)
-  - [x] Create "world info" structure, which gets serialized, loaded etc.
-    - [x] Serialize camera position and rotation
-    - [x] Serialize initial state of the environment
-  - [x] Add ability for player to interact with environment put this into timeline
-  - [ ] Create player inventory
-- [ ] Create basic UI library
-  - [x] Render rectangle
-  - [x] Render icons
-  - [x] Create toolbar
-  - [ ] Render text
-  - [ ] Create UI for time jump
 - [ ] Fix the whole billboarding/camera rotation shenangian
   - _HOLY FUCK I'VE SPENT LIKE A WEEK ON THIS SHIT._
   - [x] Refactor code into self contained chunks
@@ -36,7 +24,19 @@ In progress:
   - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
 
 Done:
-- Fix number keys not triggering input events
+- [x] Create basic UI toolkit
+  - [x] Render rectangle
+  - [x] Render icons
+  - [x] Create toolbar
+  - [x] Render text
+- [x] Add items to the world which can be picked up and placed in inventory
+  - [x] Create serializer, with easy way to swap out implementations (ie. binary vs debug plaintext)
+  - [x] Create "world info" structure, which gets serialized, loaded etc.
+    - [x] Serialize camera position and rotation
+    - [x] Serialize initial state of the environment
+  - [x] Add ability for player to interact with environment put this into timeline
+  - [x] Create player inventory
+- [x] Fix number keys not triggering input events
 - [x] Windows support
   - [x] Split linux platform code into separate file
   - [x] Create "interface" which needs to be implemented by new platforms
