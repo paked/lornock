@@ -180,7 +180,7 @@ bool inventorySlot_empty(InventorySlot is) {
 }
 
 #define INVENTORY_SIZE 9
-#define INVENTORY_MAX_STACK_SIZE 4
+#define INVENTORY_MAX_STACK_SIZE 64
 struct Inventory {
   int currentSlot;
 
