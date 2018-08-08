@@ -59,6 +59,8 @@ set(DATA_FILES
     data/font/quicksand_regular.png
     data/font/quicksand_regular.fnt
 
+    data/font/renogare.png
+    data/font/renogare.fnt
     # 2D
     data/shaders/rectangle.vert
     data/shaders/rectangle.frag

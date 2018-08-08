@@ -207,6 +207,7 @@ void gameState_init(State* state) {
   assets_requestModel(MODEL_coal);
 
   assets_requestFont(FONT_quicksand_regular);
+  assets_requestFont(FONT_renogare);
 
   draw.clear = vec4(7.0f, 6.0f, 15.0f, 1.0f);
 
@@ -592,7 +593,40 @@ void gameState_render(GameState *g, RenderMode m) {
   if (m == RENDER_MODE_NORMAL) {
     draw_2d_begin();
 
-    draw_text((char*) "hello", vec2(0.0f, 0.0f), 0.5f, font(FONT_quicksand_regular), true, true);
+    char side[32] = "";
+
+    switch (gameState_getCurrentFace(g)) {
+      case BACK:
+        {
+          strcpy(side, "back side");
+        } break;
+      case FRONT:
+        {
+          strcpy(side, "front side");
+        } break;
+      case LEFT:
+        {
+          strcpy(side, "left side");
+        } break;
+      case RIGHT:
+        {
+          strcpy(side, "right side");
+        } break;
+      case TOP:
+        {
+          strcpy(side, "top side");
+        } break;
+      case BOTTOM:
+        {
+          strcpy(side, "bottom side");
+        } break;
+      default:
+        {
+          strcpy(side, "unknown side");
+        } break;
+    }
+
+    draw_text(side, vec2(getWindowWidth()/2, 50.0f), 1.0f, font(FONT_renogare), TEXT_ALIGN_CENTER);
 
     ui_begin(font(FONT_quicksand_regular));
 

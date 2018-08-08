@@ -189,7 +189,7 @@ void ui_draw() {
             draw_sprite(elem.rect, texture(elem.textureID));
           }
 
-          float countWidth = 20;
+          float countWidth = 30;
           Rect r = elem.rect;
           r.x += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
           r.y += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
@@ -197,7 +197,10 @@ void ui_draw() {
           r.h = countWidth;
 
           draw_rectangle(r, vec4(0, 0, 0, 1.0f));
-          draw_text((char*) "64", vec2(r.x + r.w/2, r.y + r.h/2), 0.2f, ui.font);
+
+          vec2 textPos = vec2(r.x + r.w/2, r.y + r.h/2);
+
+          draw_text((char*) "64", textPos, 0.2f, ui.font, TEXT_ALIGN_CENTER);
         } break;
       default:
         {
