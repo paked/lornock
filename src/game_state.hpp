@@ -163,11 +163,26 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   }
 }
 
-enum BlockType {
+enum BlockType : uint32 {
   BLOCK_NONE,
   BLOCK_ROCK,
   BLOCK_COAL
 };
 
+struct InventorySlot {
+  uint32 type; // BlockType
+
+  int count;
+};
+
+bool inventorySlot_empty(InventorySlot is) {
+  return is.type == BLOCK_NONE;
+}
+
 #define INVENTORY_SIZE 9
-typedef uint32 Inventory[INVENTORY_SIZE];
+#define INVENTORY_MAX_STACK_SIZE 4
+struct Inventory {
+  int currentSlot;
+
+  InventorySlot hotbar[INVENTORY_SIZE];
+};

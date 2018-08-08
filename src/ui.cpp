@@ -47,6 +47,7 @@ struct UIElement {
       bool hasTexture;
       uint32 textureID;
 
+      int count;
       bool selected;
     };
   };
@@ -123,7 +124,7 @@ void ui_toolbarEnd() {
   ui.parent = 0;
 }
 
-void ui_toolbarOption(UIID id, bool selected, uint32 tex=MAX_TEXTURE) {
+void ui_toolbarOption(UIID id, bool selected, int count, uint32 tex=MAX_TEXTURE) {
   ensure(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
 
   UIElement* e = ui_getElement(id);
@@ -142,6 +143,8 @@ void ui_toolbarOption(UIID id, bool selected, uint32 tex=MAX_TEXTURE) {
     e->hasTexture = true;
     e->textureID = tex;
   }
+
+  e->count = count;
 
   e->selected = selected;
 
@@ -198,9 +201,15 @@ void ui_draw() {
 
           draw_rectangle(r, vec4(0, 0, 0, 1.0f));
 
-          vec2 textPos = vec2(r.x + r.w/2, r.y + r.h/2);
+          if (elem.count > 0) {
+            vec2 textPos = vec2(r.x + r.w/2, r.y + r.h/2);
 
-          draw_text((char*) "64", textPos, 0.2f, ui.font, TEXT_ALIGN_CENTER);
+            char str[4] = {0};
+
+            snprintf(str, 4, "%d", elem.count);
+
+            draw_text(str, textPos, 0.2f, ui.font, TEXT_ALIGN_CENTER);
+          }
         } break;
       default:
         {

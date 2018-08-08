@@ -256,6 +256,19 @@ bool shader_setInt(Shader* shader, const char* name, int v) {
   return true;
 }
 
+bool shader_setFloat(Shader* shader, const char* name, float v) {
+  GLint loc = glGetUniformLocation(shader->id, name);
+  if (loc == -1) {
+    logfln("ERROR: cannot find uniform location %s", name);
+
+    return false;
+  }
+
+  glUniform1f(loc, v);
+
+  return true;
+}
+
 void shader_clean(Shader* shader) {
   glDeleteProgram(shader->id);
   shader->id = 0;

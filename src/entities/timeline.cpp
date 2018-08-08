@@ -42,6 +42,15 @@ void environment_handle(Environment* e, TouchAction ta) {
   environment_handle(e, ta.block, ta.face, ta.x, ta.y);
 }
 
+void inventory_serialize(Inventory* inv, Serializer* s) {
+  serializer_int(s, &inv->currentSlot);
+
+  for (int i = 0; i < INVENTORY_SIZE; i++) {
+    serializer_uint32(s, &inv->hotbar[i].type);
+    serializer_int(s, &inv->hotbar[i].count);
+  }
+}
+
 struct TimelineInfo {
   Environment initialState;
 
@@ -73,9 +82,7 @@ void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
   serializer_vec3(s, &tli->right);
   serializer_vec3(s, &tli->forward);
 
-  for (int i = 0; i < INVENTORY_SIZE; i++) {
-    serializer_uint32(s, &tli->inventory[i]);
-  }
+  inventory_serialize(&tli->inventory, s);
 }
 
 struct Timeline {
@@ -129,7 +136,7 @@ void timeline_create(Timeline* tb) {
   // Create inventory
   {
     for (int i = 0; i < INVENTORY_SIZE; i++) {
-      tb->info.inventory[i] = BLOCK_NONE;
+      tb->info.inventory.hotbar[i].type = BLOCK_NONE;
     }
   }
 }

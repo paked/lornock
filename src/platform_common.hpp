@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdio>
+#include <stdlib.h>
 #include <string.h>
 
 #define log(...) fprintf(stderr, __VA_ARGS__)

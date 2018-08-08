@@ -30,8 +30,6 @@ struct GameState {
 
   Environment environment;
 
-  uint8 inventoryCurrentSlot;
-
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
   uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
@@ -248,8 +246,6 @@ void gameState_init(State* state) {
     gameState_spawnNecessaryPastPlayers(g, &g->timeline, &g->timeIndex);
 
     timeline_getEnvironmentStateAt(&g->timeline, &g->environment, g->timeIndex.time);
-
-    g->inventoryCurrentSlot = 0;
   }
 }
 
@@ -393,13 +389,30 @@ void gameState_timeJump(GameState *g, int64 destination) {
 }
 
 bool gameState_pickup(GameState* g, uint32 item) {
+  // Firstly try and fit it into an existing stack
   for (int i = 0; i < INVENTORY_SIZE; i++) {
-    if (g->timeline.info.inventory[i] == BLOCK_NONE) {
-      g->timeline.info.inventory[i] = item;
+    InventorySlot* slot = &g->timeline.info.inventory.hotbar[i];
+
+    if (slot->type == item && slot->count < INVENTORY_MAX_STACK_SIZE) {
+      slot->count += 1;
 
       return true;
     }
   }
+
+  // Secondly make new stack!
+  for (int i = 0; i < INVENTORY_SIZE; i++) {
+    InventorySlot* slot = &g->timeline.info.inventory.hotbar[i];
+
+    if (slot->type == BLOCK_NONE) {
+      slot->type = item;
+      slot->count = 1;
+
+      return true;
+    }
+  }
+
+  // No space left in inventory
 
   return false;
 }
@@ -407,13 +420,19 @@ bool gameState_pickup(GameState* g, uint32 item) {
 bool gameState_use(GameState* g, uint32 slot) {
   ensure(slot < INVENTORY_SIZE && slot >= 0);
 
-  if (g->timeline.info.inventory[slot] == 0) {
+  InventorySlot* is = &g->timeline.info.inventory.hotbar[slot];
+
+  if (is->type == BLOCK_NONE) {
     return false;
   }
 
-  g->timeline.info.inventory[slot] = 0;
+  if (is->count > 0) {
+    is->count -= 1;
 
-  g->inventoryCurrentSlot = (g->inventoryCurrentSlot + 1) % INVENTORY_SIZE;
+    if (is->count == 0) {
+      is->type = BLOCK_NONE;
+    }
+  }
 
   return true;
 }
@@ -424,9 +443,9 @@ void gameState_touchEnvironment(GameState* g, int face, int x, int y) {
   uint32 block = v;
 
   if (v == BLOCK_NONE) {
-    uint32 i = g->timeline.info.inventory[g->inventoryCurrentSlot];
+    uint32 i = g->timeline.info.inventory.hotbar[g->timeline.info.inventory.currentSlot].type;
 
-    if (!gameState_use(g, g->inventoryCurrentSlot)) {
+    if (!gameState_use(g, g->timeline.info.inventory.currentSlot)) {
       logln("nothing in selected inventory slot");
 
       return;
@@ -499,7 +518,6 @@ void gameState_render(GameState *g, RenderMode m) {
     draw.projection = lightProjection;
 
     draw_setShader(shader(SHADER_depth));
-
     return;
   } else {
     ensure(false);
@@ -636,9 +654,9 @@ void gameState_render(GameState *g, RenderMode m) {
       for (int i = 0; i < INVENTORY_SIZE; i++) {
         uint32 tex = MAX_TEXTURE;
 
-        uint32 item = g->timeline.info.inventory[i];
+        InventorySlot item = g->timeline.info.inventory.hotbar[i];
 
-        switch (item) {
+        switch (item.type) {
           case BLOCK_ROCK:
             {
               tex = TEXTURE_rock_icon;
@@ -655,7 +673,8 @@ void gameState_render(GameState *g, RenderMode m) {
 
         ui_toolbarOption(
             uiid_genEx(i),
-            i == g->inventoryCurrentSlot,
+            i == g->timeline.info.inventory.currentSlot,
+            item.count,
             tex);
       }
 
@@ -718,7 +737,7 @@ void gameState_update(State *state) {
     uint32 k = KEY_1 + i;
 
     if (keyJustDown(k)) {
-      g->inventoryCurrentSlot = i;
+      g->timeline.info.inventory.currentSlot = i;
     }
   }
 
