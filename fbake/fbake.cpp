@@ -84,6 +84,14 @@ int main(int argc, char* argv[]) {
     fclose(ttfFile);
   }
 
+  stbtt_fontinfo info;
+
+  if (stbtt_InitFont(&info, ttfFileBuffer, 0) == 0) {
+    logln("ERROR: could not parse font");
+
+    return -1;
+  }
+
   // 2. Create bitmap
   int64 bitmapWidth = 512;
   int64 bitmapHeight = 512;
@@ -127,7 +135,20 @@ int main(int argc, char* argv[]) {
   }
 
   // 3. Output char information
-  fprintf(out, "lh %ld\n", lineHeight);
+  {
+    int x0 = 0;
+    int y0 = 0;
+    int x1 = 0;
+    int y1 = 0;
+
+    stbtt_GetFontBoundingBox(&info, &x0, &y0, &x1, &y1);
+
+    real32 sf = stbtt_ScaleForPixelHeight(&info, pixelHeight);
+
+    real32 baseLine = sf * -y0;
+
+    fprintf(out, "ph %d bl %f lh %ld\n", pixelHeight, baseLine, lineHeight);
+  }
 
   for (int i = 0; i < charCount; i++) {
     stbtt_bakedchar info = *(chars + i);

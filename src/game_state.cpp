@@ -592,9 +592,9 @@ void gameState_render(GameState *g, RenderMode m) {
   if (m == RENDER_MODE_NORMAL) {
     draw_2d_begin();
 
-    draw_text((char*)"hello world", vec2(100, 100), 1.0f, font(FONT_quicksand_regular));
+    draw_text((char*) "hello", vec2(0.0f, 0.0f), 0.5f, font(FONT_quicksand_regular), true, true);
 
-    ui_begin();
+    ui_begin(font(FONT_quicksand_regular));
 
     {
       ui_toolbarBegin(uiid_gen());

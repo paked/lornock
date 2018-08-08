@@ -639,6 +639,8 @@ void model_clean(Model* m) {
 struct Font {
   Texture texture;
 
+  int pixelHeight;
+  float baseLine;
   int64 lineHeight;
 
   int x0[FONT_CHARS];
@@ -691,7 +693,10 @@ Font font_load(const char* name) {
       rawUpTo += 1;
 
       if (firstLine) {
-        ensure(sscanf(line, "lh %ld", &f.lineHeight) == 1);
+        ensure(sscanf(line, "ph %d bl %f lh %ld",
+              &f.pixelHeight,
+              &f.baseLine,
+              &f.lineHeight) == 3);
 
         firstLine = false;
 
@@ -725,6 +730,23 @@ void font_clean(Font* f) {
   // TODO: fill
 
   ensure(false);
+}
+
+real32 font_getStringWidth(Font f, char* text, real32 scale) {
+  real32 w = 0;
+  int i = 0;
+
+  while (text[i]) {
+    if (text[i] >= 32 && text[i] < 126) {
+      int c = text[i] - 32;
+
+      w += f.xadv[c] * scale;
+    }
+
+    i += 1;
+  }
+
+  return w;
 }
 
 struct Assets {

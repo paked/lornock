@@ -70,6 +70,8 @@ struct {
 
   real32 nextX;
   real32 nextY;
+
+  Font font;
 } ui = {0};
 
 UIElement* ui_getElement(UIID id) {
@@ -84,11 +86,13 @@ UIElement* ui_getElement(UIID id) {
   return 0;
 }
 
-void ui_begin() {
+void ui_begin(Font f) {
   ui.nextX = 0;
   ui.nextY = 0;
 
   ui.parent = 0;
+
+  ui.font = f;
 }
 
 void ui_end() {}
@@ -184,6 +188,16 @@ void ui_draw() {
           if (elem.hasTexture) {
             draw_sprite(elem.rect, texture(elem.textureID));
           }
+
+          float countWidth = 20;
+          Rect r = elem.rect;
+          r.x += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
+          r.y += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
+          r.w = countWidth;
+          r.h = countWidth;
+
+          draw_rectangle(r, vec4(0, 0, 0, 1.0f));
+          draw_text((char*) "64", vec2(r.x + r.w/2, r.y + r.h/2), 0.2f, ui.font);
         } break;
       default:
         {

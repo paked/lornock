@@ -156,8 +156,19 @@ void draw_sprite(Rect rect, Texture t) {
   glBindVertexArray(0);
 }
 
-void draw_text(char* text, vec2 pos, real32 scale, Font f) {
+// TODO(harrison): replace centerX, centerY args with flags
+void draw_text(char* text, vec2 pos, real32 scale, Font f, bool centerX = true, bool centerY = true) {
   Shader oldShader = draw.activeShader;
+
+  if (centerX) {
+    pos.x -= font_getStringWidth(f, text, scale)/2.0f;
+  }
+
+  pos.y -= f.baseLine * scale;
+
+  if (centerY) {
+    pos.y += (f.pixelHeight * scale)/2;
+  }
 
   {
     draw_setShader(shader(SHADER_text));
