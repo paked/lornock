@@ -55,12 +55,9 @@ set(DATA_FILES
     data/shaders/default.frag
     data/shaders/depth.vert
     data/shaders/depth.frag
+    data/shaders/particle.vert
+    data/shaders/particle.frag
 
-    data/font/quicksand_regular.png
-    data/font/quicksand_regular.fnt
-
-    data/font/renogare.png
-    data/font/renogare.fnt
     # 2D
     data/shaders/rectangle.vert
     data/shaders/rectangle.frag
@@ -69,9 +66,15 @@ set(DATA_FILES
     data/shaders/text.vert
     data/shaders/text.frag
 
+    data/font/quicksand_regular.png
+    data/font/quicksand_regular.fnt
+    data/font/renogare.png
+    data/font/renogare.fnt
+
     data/mesh/rock.obj
     data/mesh/coal.obj
 
+    data/img/particle.png
     data/img/player.png
     data/img/rock.png
     data/img/rock_albedo.png

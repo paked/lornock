@@ -4,6 +4,12 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
+#define PARTICLE_SPACING (0.5f)
+#define PARTICLE_COUNT (50)
+struct Particle {
+  real32 x, y, z;
+};
+
 struct GameState {
   TimeIndex timeIndex;
   uint64 timelineNextTickTime;
@@ -39,6 +45,9 @@ struct GameState {
 
   GLuint shadowFBO;
   GLuint shadowMap;
+
+  // @Particles
+  Particle particles[PARTICLE_COUNT];
 };
 
 uint32 gameState_getCurrentFace(GameState *g) {
@@ -87,6 +96,18 @@ void gameState_disableAllPastPlayers(GameState* g) {
 void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
+
+  {
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+      Particle p = {
+        (rand01()*2.0f-1.0f) * PARTICLE_SPACING,
+        (rand01()*2.0f-1.0f) * PARTICLE_SPACING,
+        (rand01()*2.0f-1.0f) * PARTICLE_SPACING
+      };
+
+      g->particles[i] = p;
+    }
+  }
 
   timeline_init(&g->timeline, &lornockData->actionsArena);
   timeline_load(&g->timeline, "simple");
@@ -186,10 +207,13 @@ void gameState_init(State* state) {
 
   assets_requestShader(SHADER_default);
   assets_requestShader(SHADER_depth);
+  assets_requestShader(SHADER_particle);
 
   assets_requestShader(SHADER_text);
   assets_requestShader(SHADER_sprite);
   assets_requestShader(SHADER_rectangle);
+
+  assets_requestTexture(TEXTURE_particle);
 
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
@@ -518,7 +542,10 @@ void gameState_render(GameState *g, RenderMode m) {
     draw.projection = lightProjection;
 
     draw_setShader(shader(SHADER_depth));
-    return;
+
+    if (keyDown(KEY_p)) {
+      return;
+    }
   } else {
     ensure(false);
   }
@@ -609,6 +636,32 @@ void gameState_render(GameState *g, RenderMode m) {
   }
 
   if (m == RENDER_MODE_NORMAL) {
+    // @Particles
+    draw_setShader(shader(SHADER_particle));
+
+    shader_setMatrix(&draw.activeShader, "view", draw.view);
+    shader_setMatrix(&draw.activeShader, "projection", draw.projection);
+    shader_setVec2(&draw.activeShader, "scale", vec2(0.3f, 0.3f));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle).id);
+
+    glBindVertexArray(draw.quadVAO);
+
+    mat4 model = mat4d(1.0f);
+
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+      Particle p = g->particles[i];
+      model = mat4Translate(mat4d(1.0f), vec3(p.x, p.y, p.z) + vec3(4.0f, 0.0f, 0.0f));
+
+      shader_setMatrix(&draw.activeShader, "model", model);
+
+      glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    glBindVertexArray(0);
+
+    // @UI
     draw_2d_begin();
 
     char side[32] = "";
