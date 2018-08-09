@@ -644,7 +644,7 @@ void gameState_render(GameState *g, RenderMode m) {
         } break;
     }
 
-    draw_text(side, vec2(getWindowWidth()/2, 50.0f), 1.0f, font(FONT_renogare), TEXT_ALIGN_CENTER);
+    draw_text(side, vec2(getWindowWidth()/2, 50.0f), 1.0f, font(FONT_renogare), vec3_white, TEXT_ALIGN_CENTER);
 
     ui_begin(font(FONT_quicksand_regular));
 

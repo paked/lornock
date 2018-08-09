@@ -13,8 +13,9 @@
 #define vec3_right (vec3(1, 0, 0))
 #define vec3_forward (vec3(0, 0, -1.0))
 
-#define vec3_print(v, name) { logfln( #name ": x = %f, y = %f, z = %f", v.x, v.y, v.z); }
+#define vec3_white (vec3(255, 255, 255))
 
+#define vec3_print(v, name) { logfln( #name ": x = %f, y = %f, z = %f", v.x, v.y, v.z); }
 
 real32 vec3Sum(vec3 v) {
   return (v.x + v.y + v.z);

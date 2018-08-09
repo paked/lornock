@@ -161,7 +161,7 @@ void draw_sprite(Rect rect, Texture t) {
 #define TEXT_ALIGN_CENTER_Y 0x02
 #define TEXT_ALIGN_CENTER (TEXT_ALIGN_CENTER_X | TEXT_ALIGN_CENTER_Y)
 
-void draw_text(char* text, vec2 pos, real32 scale, Font f, int8 flags=(TEXT_ALIGN_LEFT|TEXT_ALIGN_CENTER_Y)) {
+void draw_text(char* text, vec2 pos, real32 scale, Font f, vec3 color = vec3_white, int8 flags=(TEXT_ALIGN_LEFT|TEXT_ALIGN_CENTER_Y)) {
   Shader oldShader = draw.activeShader;
 
   if (flags & TEXT_ALIGN_CENTER_X) {
@@ -170,13 +170,15 @@ void draw_text(char* text, vec2 pos, real32 scale, Font f, int8 flags=(TEXT_ALIG
 
   pos.y -= f.baseLine * scale;
   if (flags & TEXT_ALIGN_CENTER_Y) {
-    pos.y += (f.pixelHeight * scale)/2;
+    pos.y += (f.pixelHeight * scale)/2.0f;
   }
 
   {
     draw_setShader(shader(SHADER_text));
 
     shader_setMatrix(&draw.activeShader, "projection", draw.projection);
+
+    shader_setVec3(&draw.activeShader, "color", color);
 
     int i = 0;
     while (text[i]) {
