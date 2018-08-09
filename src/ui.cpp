@@ -192,23 +192,23 @@ void ui_draw() {
             draw_sprite(elem.rect, texture(elem.textureID));
           }
 
-          float countWidth = 30;
-          Rect r = elem.rect;
-          r.x += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
-          r.y += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
-          r.w = countWidth;
-          r.h = countWidth;
-
-          draw_rectangle(r, vec4(0, 0, 0, 1.0f));
-
           if (elem.count > 0) {
+            float countWidth = 30;
+            Rect r = elem.rect;
+            r.x += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
+            r.y += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
+            r.w = countWidth;
+            r.h = countWidth;
+
+            draw_rectangle(r, vec4(0, 0, 0, 0.5f));
+
             vec2 textPos = vec2(r.x + r.w/2, r.y + r.h/2);
 
             char str[4] = {0};
 
             snprintf(str, 4, "%d", elem.count);
 
-            draw_text(str, textPos, 0.2f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
+            draw_text(str, textPos, 0.3f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
           }
         } break;
       default:
