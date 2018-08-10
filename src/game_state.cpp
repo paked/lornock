@@ -4,11 +4,14 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
-#define PARTICLE_ROOT (vec3(4.0f, 0.0f, 0.0f))
+#define PARTICLE_MUL (10.0f)
+#define PARTICLE_ROOT (vec3(0.0f, 0.0f, -4.0f))
 #define PARTICLE_SPACING (0.5f)
-#define PARTICLE_COUNT (50)
+#define PARTICLE_COUNT (10)
 struct Particle {
   real32 x, y, z;
+
+  int id;
 
   // For depth sorting
   real32 distanceFromCameraSquared;
@@ -101,12 +104,13 @@ void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
+  // @Particles Init
   {
     for (int i = 0; i < PARTICLE_COUNT; i++) {
       Particle p = {
-        (rand01()*2.0f-1.0f) * PARTICLE_SPACING,
-        (rand01()*2.0f-1.0f) * PARTICLE_SPACING,
-        (rand01()*2.0f-1.0f) * PARTICLE_SPACING
+        (rand01() * 2 - 1) * PARTICLE_SPACING,
+        (rand01() * 2 - 1) * PARTICLE_SPACING,
+        (rand01() * 2 - 1) * PARTICLE_SPACING,
       };
 
       g->particles[i] = p;
@@ -555,6 +559,8 @@ void gameState_render(GameState *g, RenderMode m) {
     ensure(false);
   }
 
+  // @Render
+
   {
     vec3 asteroidPosition = vec3(0, 0, 0);
     vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
@@ -641,22 +647,28 @@ void gameState_render(GameState *g, RenderMode m) {
   }
 
   if (m == RENDER_MODE_NORMAL) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // @Particles
+
+    vec3 cameraPos = CAMERA_POSITION;
+    {
+      vec4 v = vec4(cameraPos.x, cameraPos.y, cameraPos.z, 1);
+
+      mat4 rot = mat4d(1.0f) * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
+      rot = rot * quatToMat4(g->cameraRotation);
+
+      v = rot * v;
+
+      cameraPos = vec3FromVec4(v);
+    }
+
     for (int i = 0; i < PARTICLE_COUNT; i++) {
       Particle* p = &g->particles[i];
 
-      vec3 cameraPos = vec3(
-          draw.view[3][0],
-          draw.view[3][1],
-          draw.view[3][2]);
+      vec3 pos = (vec3(p->x, p->y, p->z)) + PARTICLE_ROOT;
 
-      vec4 v = vec4(1, 1, 1, 1);
-      v = draw.view * v;
-
-      vec3 v3 = vec3FromVec4(v);
-
-      vec3 particlePos = vec3(p->x, p->y, p->z) + PARTICLE_ROOT;
-
-      p->distanceFromCameraSquared = vec3LengthSquared(cameraPos - particlePos);
+      p->distanceFromCameraSquared = vec3LengthSquared(pos - cameraPos);
     }
 
     {
@@ -683,18 +695,17 @@ void gameState_render(GameState *g, RenderMode m) {
       }
     }
 
-    // @Particles
     draw_setShader(shader(SHADER_particle));
 
     shader_setMatrix(&draw.activeShader, "view", draw.view);
     shader_setMatrix(&draw.activeShader, "projection", draw.projection);
-    shader_setVec2(&draw.activeShader, "scale", vec2(0.3f, 0.3f));
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle).id);
+    shader_setVec2(&draw.activeShader, "scale", vec2(1.0f, 1.0f));
 
     shader_setInt(&draw.activeShader, "ourTexture", 0);
     shader_setInt(&draw.activeShader, "colorMap", 1);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle).id);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle_color_map).id);
@@ -703,14 +714,21 @@ void gameState_render(GameState *g, RenderMode m) {
 
     mat4 model = mat4d(1.0f);
 
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
+    glDepthMask(GL_FALSE);
+    for (int i = PARTICLE_COUNT - 1; i >= 0; i--) {
       Particle p = g->particles[i];
-      model = mat4Translate(mat4d(1.0f), vec3(p.x, p.y, p.z) + PARTICLE_ROOT);
+
+      vec3 pos = vec3(p.x, p.y, p.z) + PARTICLE_ROOT;
+
+      model = mat4Translate(mat4d(1.0f), pos);
+      model = mat4Translate(model, vec3(0.5f, 0.5f, 0.0f) * -1);
 
       shader_setMatrix(&draw.activeShader, "model", model);
 
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
+
+    glDepthMask(GL_TRUE);
 
     glBindVertexArray(0);
 
