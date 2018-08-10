@@ -7,3 +7,4 @@ texture(coal_icon)
 texture(coal_albedo)
 
 texture(particle)
+texture(particle_color_map)

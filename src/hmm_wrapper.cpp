@@ -29,3 +29,5 @@ typedef hmm_quaternion quat;
 
 #define vec3Normalize(v) HMM_NormalizeVec3(v)
 #define vec4Normalize(v) HMM_NormalizeVec4(v)
+
+#define vec3LengthSquared(v) HMM_LengthSquaredVec3(v)

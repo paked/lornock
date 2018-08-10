@@ -4,10 +4,14 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
+#define PARTICLE_ROOT (vec3(4.0f, 0.0f, 0.0f))
 #define PARTICLE_SPACING (0.5f)
 #define PARTICLE_COUNT (50)
 struct Particle {
   real32 x, y, z;
+
+  // For depth sorting
+  real32 distanceFromCameraSquared;
 };
 
 struct GameState {
@@ -214,6 +218,7 @@ void gameState_init(State* state) {
   assets_requestShader(SHADER_rectangle);
 
   assets_requestTexture(TEXTURE_particle);
+  assets_requestTexture(TEXTURE_particle_color_map);
 
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
@@ -636,6 +641,48 @@ void gameState_render(GameState *g, RenderMode m) {
   }
 
   if (m == RENDER_MODE_NORMAL) {
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+      Particle* p = &g->particles[i];
+
+      vec3 cameraPos = vec3(
+          draw.view[3][0],
+          draw.view[3][1],
+          draw.view[3][2]);
+
+      vec4 v = vec4(1, 1, 1, 1);
+      v = draw.view * v;
+
+      vec3 v3 = vec3FromVec4(v);
+
+      vec3 particlePos = vec3(p->x, p->y, p->z) + PARTICLE_ROOT;
+
+      p->distanceFromCameraSquared = vec3LengthSquared(cameraPos - particlePos);
+    }
+
+    {
+      // Simple bubble sort for now
+      // TODO(harrison): rewrite as a quicksort
+
+      Particle temp;
+      int i = 0;
+      int j = 0;
+
+      while (i < PARTICLE_COUNT) {
+        j = 0;
+        while (j < i) {
+          if (g->particles[j].distanceFromCameraSquared > g->particles[i].distanceFromCameraSquared) {
+            temp = g->particles[j];
+            g->particles[j] = g->particles[i];
+            g->particles[i] = temp;
+          }
+
+          j++;
+        }
+
+        i++;
+      }
+    }
+
     // @Particles
     draw_setShader(shader(SHADER_particle));
 
@@ -646,13 +693,19 @@ void gameState_render(GameState *g, RenderMode m) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle).id);
 
+    shader_setInt(&draw.activeShader, "ourTexture", 0);
+    shader_setInt(&draw.activeShader, "colorMap", 1);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle_color_map).id);
+
     glBindVertexArray(draw.quadVAO);
 
     mat4 model = mat4d(1.0f);
 
     for (int i = 0; i < PARTICLE_COUNT; i++) {
       Particle p = g->particles[i];
-      model = mat4Translate(mat4d(1.0f), vec3(p.x, p.y, p.z) + vec3(4.0f, 0.0f, 0.0f));
+      model = mat4Translate(mat4d(1.0f), vec3(p.x, p.y, p.z) + PARTICLE_ROOT);
 
       shader_setMatrix(&draw.activeShader, "model", model);
 
