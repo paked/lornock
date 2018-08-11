@@ -15,16 +15,18 @@ Todo:
 - Create star system
 
 In progress:
+- [ ] Create more cells in the world
 - [ ] Simple particle system
   - [x] Implement basic dust cloud system
-  - [ ] Have multiple cloud textures, vary particle szie
-  - [ ] Spawn dust particles within ellipsoid
+  - [x] Have multiple cloud textures, vary particle szie
+  - [x] Spawn dust particles within ellipsoid
   - [ ] Fade alpha from center of cloud with `x^2/a^2 + y^2/b^2 + z^2/c^2` formula
-  - [ ] Add ability to have multiple clouds
+  - [x] Add ability to have multiple clouds
   - [ ] Profile code and determine if I need to optimise the particles
     - Stop sorting each frame
     - Use GPU instancing
     - Simulate particles on the GPU
+  - Use MemoryArenas to have a dynamic set of shit.
 - [ ] Remove cmake
   - [x] Create non-cmake build script for Windows
   - [ ] Create non-cmake build script for Linux

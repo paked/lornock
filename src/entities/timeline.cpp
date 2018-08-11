@@ -21,17 +21,17 @@ void timeIndex_init(TimeIndex* index) {
   index->point = 0;
 }
 
-typedef uint8 Environment[MAX_FACE][WORLD_HEIGHT][WORLD_WIDTH];
+typedef uint8 Environment[MAX_FACE][WORLD_CELL_COUNT][WORLD_CELL_COUNT];
 
 void environment_copy(Environment* from, Environment* to) {
-  memcpy(to, from, sizeof(uint8) * MAX_FACE * WORLD_HEIGHT * WORLD_WIDTH);
+  memcpy(to, from, sizeof(uint8) * MAX_FACE * WORLD_CELL_COUNT * WORLD_CELL_COUNT);
 }
 
 void environment_handle(Environment* e, uint32 block, uint32 face, int x, int y) {
   ensure(
       (face >= BACK && face < MAX_FACE) &&
-      (x >= 0 && x < WORLD_WIDTH) &&
-      (y >= 0 && y < WORLD_HEIGHT));
+      (x >= 0 && x < WORLD_CELL_COUNT) &&
+      (y >= 0 && y < WORLD_CELL_COUNT));
 
   uint8* ptr = *(*(*e + face) + y) + x;
 
@@ -69,8 +69,8 @@ struct TimelineInfo {
 void timelineInfo_serialize(TimelineInfo* tli, Serializer* s) {
   // Serialize environment
   for (int face = 0; face < MAX_FACE; face++) {
-    for (int y = 0; y < WORLD_HEIGHT; y++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
+    for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+      for (int x = 0; x < WORLD_CELL_COUNT; x++) {
         serializer_uint8(s, &tli->initialState[face][y][x]);
       }
     }
@@ -106,9 +106,9 @@ void timeline_create(Timeline* tb) {
   // Generate world
   {
     for (int face = 0; face < MAX_FACE; face++) {
-      for (int y = 0; y < WORLD_HEIGHT; y++) {
-        for (int x = 0; x < WORLD_WIDTH; x++) {
-          tb->info.initialState[face][y][x] = ((real32)rand() / (real32)RAND_MAX) > 0.6f ? 1 : 0;
+      for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+        for (int x = 0; x < WORLD_CELL_COUNT; x++) {
+          tb->info.initialState[face][y][x] = (rand01() > 0.6f ? 1 : 0);
         }
       }
     }

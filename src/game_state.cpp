@@ -34,7 +34,7 @@ struct GameState {
 
   PastPlayer pastPlayers[MAX_PAST_PLAYERS];
 
-  uint8 world[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH];
+  World world;
   Mesh worldMesh;
 
   Mesh cubeMesh;
@@ -103,7 +103,7 @@ void gameState_init(State* state) {
     y *= (rand01() < 0.5 ? -1 : 1);
     z *= (rand01() < 0.5 ? -1 : 1);
 
-    if (vec3LengthSquared(vec3(x, y, z)) < (WORLD_WIDTH*2.5f) * (WORLD_WIDTH*2.5f)) {
+    if (vec3LengthSquared(vec3(x, y, z)) < (WORLD_SIZE*2.5f) * (WORLD_SIZE*2.5f)) {
       i -= 1;
 
       continue;
@@ -148,18 +148,18 @@ void gameState_init(State* state) {
 
   gameState_disableAllPastPlayers(g);
 
-  for (int y = 0; y < WORLD_HEIGHT; y++) {
-    for (int z = 0; z < WORLD_DEPTH; z++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
+  for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+    for (int z = 0; z < WORLD_CELL_COUNT; z++) {
+      for (int x = 0; x < WORLD_CELL_COUNT; x++) {
         g->world[y][z][x] = 1;
       }
     }
   }
 
   // init world
-  for (int y = 0; y < WORLD_HEIGHT; y++) {
-    for (int z = 0; z < WORLD_DEPTH; z++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
+  for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+    for (int z = 0; z < WORLD_CELL_COUNT; z++) {
+      for (int x = 0; x < WORLD_CELL_COUNT; x++) {
         g->world[y][z][x] = 1;
       }
     }
@@ -168,14 +168,14 @@ void gameState_init(State* state) {
   uint64 count = 0;
   real32* verts = (real32*) m->transientStorage;
 
-  for (int y = 0; y < WORLD_HEIGHT; y++) {
-    for (int z = 0; z < WORLD_DEPTH; z++) {
-      for (int x = 0; x < WORLD_WIDTH; x++) {
+  for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+    for (int z = 0; z < WORLD_CELL_COUNT; z++) {
+      for (int x = 0; x < WORLD_CELL_COUNT; x++) {
         if (g->world[y][z][x] != 1) {
           continue;
         }
 
-        vec3 pos = vec3(x, y, z);
+        vec3 pos = vec3(x, y, z) * WORLD_CELL_SIZE;
 
         for (int d = 0; d < MAX_FACE; d++) {
           if (!voxelEmptyToThe(d, g->world, x, y, z)) {
@@ -571,7 +571,7 @@ void gameState_render(GameState *g, RenderMode m) {
   // @Asteroid render
   {
     vec3 asteroidPosition = vec3(0, 0, 0);
-    vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
+    vec3 asteroidOffset = -WORLD_SIZE/2 * vec3_one;
 
     mat4 model = mat4d(1);
     model = mat4Translate(model, asteroidOffset);
@@ -582,7 +582,7 @@ void gameState_render(GameState *g, RenderMode m) {
 
   // @Player render
   {
-    real32 scale = 0.4f;
+    real32 scale = 0.5f;
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(model, g->playerPos);
@@ -592,7 +592,7 @@ void gameState_render(GameState *g, RenderMode m) {
     draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
   }
 
-  //@Past Players render
+  // @Past Players render
   {
     for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
       PastPlayer pp = g->pastPlayers[i];
@@ -614,14 +614,14 @@ void gameState_render(GameState *g, RenderMode m) {
 
   // @Items render
   {
-    vec3 worldOffset = vec3(-1.5f, 1.5, -1.5f);
+    vec3 worldOffset = vec3(-WORLD_SIZE/2, WORLD_SIZE/2, -WORLD_SIZE/2);
     vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
 
     for (int f = 0; f < MAX_FACE; f++) {
       mat4 face = quatToMat4(faceRotations[f]);
 
-      for (int y = 0; y < WORLD_HEIGHT; y++) {
-        for (int x = 0; x < WORLD_WIDTH; x++) {
+      for (int y = 0; y < WORLD_CELL_COUNT; y++) {
+        for (int x = 0; x < WORLD_CELL_COUNT; x++) {
           uint32 type = g->environment[f][y][x];
           if (type == BLOCK_NONE) {
             continue;
@@ -646,9 +646,10 @@ void gameState_render(GameState *g, RenderMode m) {
           ensure(modelID != MAX_MODEL && textureID != MAX_TEXTURE);
 
           mat4 model = mat4d(1.0f);
-          model = mat4Translate(model, worldOffset + modelOffset);
-          model = mat4Translate(model, vec3(x, 0, y));
+          model = mat4Translate(model, worldOffset + modelOffset * WORLD_CELL_SIZE);
+          model = mat4Translate(model, vec3(x, 0, y) * WORLD_CELL_SIZE);
           model = face * model;
+          model = mat4Scale(model, vec3_one * WORLD_CELL_SIZE);
 
           draw_3d_model(model(modelID), model, texture(textureID));
         }
@@ -898,9 +899,9 @@ void gameState_update(State *state) {
 
       uint32 direction = ROT_IDLE;
 
-      if (fabs(rightLen) > 1.49f) {
+      if (fabs(rightLen) > WORLD_SIZE/2) {
         direction = (rightLen > 0) ? ROT_RIGHT : ROT_LEFT;
-      } else if (fabs(forwardLen) > 1.49f) {
+      } else if (fabs(forwardLen) > WORLD_SIZE/2) {
         direction = (forwardLen > 0) ? ROT_FORWARD : ROT_BACKWARD;
       }
 
@@ -909,9 +910,9 @@ void gameState_update(State *state) {
       }
     }
 
-    g->playerPos.x = clamp(g->playerPos.x, -1.5f, 1.5f);
-    g->playerPos.y = clamp(g->playerPos.y, -1.5f, 1.5f);
-    g->playerPos.z = clamp(g->playerPos.z, -1.5f, 1.5f);
+    g->playerPos.x = clamp(g->playerPos.x, -WORLD_SIZE/2, WORLD_SIZE/2);
+    g->playerPos.y = clamp(g->playerPos.y, -WORLD_SIZE/2, WORLD_SIZE/2);
+    g->playerPos.z = clamp(g->playerPos.z, -WORLD_SIZE/2, WORLD_SIZE/2);
 
     if (keyJustDown(KEY_space)) {
       int face = gameState_getCurrentFace(g);
@@ -919,11 +920,11 @@ void gameState_update(State *state) {
       vec3 right = faceCardinalDirections[face][DIRECTION_RIGHT];
       vec3 forward = faceCardinalDirections[face][DIRECTION_FORWARD];
 
-      real32 rx = vec3Sum(g->playerPos * right);
-      real32 ry = vec3Sum(g->playerPos * forward) * -1;
+      real32 rx = vec3Sum(g->playerPos * right) + WORLD_SIZE/2;
+      real32 ry = vec3Sum(g->playerPos * forward) * -1 + WORLD_SIZE/2;
 
-      int x = (int) (rx + 1.5f);
-      int y = (int) (ry + 1.5f);
+      int x = (int) (rx / WORLD_CELL_SIZE);
+      int y = (int) (ry / WORLD_CELL_SIZE);
 
       gameState_touchEnvironment(g, face, x, y);
     }

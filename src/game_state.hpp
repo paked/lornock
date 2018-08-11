@@ -1,14 +1,17 @@
 #define PLAYER_DEFAULT_SPAWN vec3(0.0f, 1.5f, 0.0f)
 
-#define WORLD_WIDTH 3
-#define WORLD_HEIGHT 3
-#define WORLD_DEPTH 3
+#define WORLD_CELL_SIZE (0.5f)
+#define WORLD_CELL_COUNT (6)
+#define WORLD_SIZE ((WORLD_CELL_SIZE*WORLD_CELL_COUNT))
 
 #define CAMERA_ROTATION_OFFSET (-30)
 #define CAMERA_POSITION (vec3(0, 0.0f, -7.25f))
 #define MAX_PAST_PLAYERS 10
 #define ROTATION_DURATION 400
 #define PLAYER_INVENTORY_SIZE 9
+
+
+typedef uint32 World[WORLD_CELL_COUNT][WORLD_CELL_COUNT][WORLD_CELL_COUNT];
 
 // Voxel direction/faces
 enum {
@@ -93,7 +96,7 @@ quat faceRotations[MAX_FACE] = {
   quatFromAngleAxis(0.0f, vec3_right), // Top
 };
 
-bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int x, int y, int z) {
+bool voxelEmptyToThe(int d, World w, int x, int y, int z) {
   int offsetX = 0;
   int offsetY = 0;
   int offsetZ = 0;
@@ -135,9 +138,9 @@ bool voxelEmptyToThe(int d, uint8 w[WORLD_HEIGHT][WORLD_DEPTH][WORLD_WIDTH], int
   int posY = y + offsetY;
   int posZ = z + offsetZ;
 
-  if (posX < 0 || posX > WORLD_WIDTH - 1 ||
-      posY < 0 || posY > WORLD_HEIGHT - 1||
-      posZ < 0 || posZ > WORLD_DEPTH - 1) {
+  if (posX < 0 || posX > WORLD_CELL_COUNT - 1 ||
+      posY < 0 || posY > WORLD_CELL_COUNT - 1||
+      posZ < 0 || posZ > WORLD_CELL_COUNT - 1) {
     return true;
   }
 
@@ -153,8 +156,11 @@ void addFaceToMesh(uint32 d, real32* verts, uint64* len, vec3 offset) {
   for (uint64 i = start; i < end; i++) {
     real32 v = cube[i];
 
-    if (i % CUBE_MESH_ELEMENT_LEN < 3) {
-      v += offset[i % CUBE_MESH_ELEMENT_LEN];
+    int index = i % CUBE_MESH_ELEMENT_LEN;
+    if (index < 3) {
+      v *= WORLD_CELL_SIZE;
+
+      v += offset[index];
     }
 
     verts[*len] = v;
