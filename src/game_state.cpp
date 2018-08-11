@@ -4,10 +4,8 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
-#define PARTICLE_ROOT (vec3(0.0f, 0.0f, -4.0f))
-
-#define PARTICLE_CLOUD_W (1.0f)
-#define PARTICLE_CLOUD_D (1.0f)
+#define PARTICLE_CLOUD_W (3.0f)
+#define PARTICLE_CLOUD_D (2.0f)
 #define PARTICLE_CLOUD_H (0.5f)
 
 #define PARTICLE_MIN_SIZE (0.1f)
@@ -25,6 +23,135 @@ struct Particle {
   real32 distanceFromCameraSquared;
 };
 
+struct ParticleEmitter {
+  real32 x, y, z;
+
+  Particle particles[PARTICLE_COUNT];
+
+  uint32 particleShape;
+  uint32 colorMap;
+};
+
+ParticleEmitter particleEmitter_init(real32 x, real32 y, real32 z) {
+  ParticleEmitter pe;
+
+  pe.x = x;
+  pe.y = y;
+  pe.z = z;
+
+  return pe;
+}
+
+void particleEmitter_generateEllipsoid(ParticleEmitter* pe, real32 w, real32 h, real32 d) {
+  for (int i = 0; i < PARTICLE_COUNT; i++) {
+    Particle p;
+
+    p.x = (rand01() * 2 - 1) * w;
+    p.y = (rand01() * 2 - 1) * h;
+    p.z = (rand01() * 2 - 1) * d;
+
+    // Particles must be between 0.5 and 1.0f
+    p.scale = rand01() * 0.5f + 0.5f,
+
+    p.alpha =
+      (p.x * p.x)/(w)*(w) +
+      (p.y * p.y)/(h)*(h) +
+      (p.z * p.z)/(d)*(d);
+
+    if (p.alpha >= 1) {
+      // This particle doesn't fit within the ellipsoid, get another one.
+      i -= 1;
+
+      continue;
+    }
+
+    pe->particles[i] = p;
+  }
+}
+
+void particleEmitter_update(ParticleEmitter* pe, vec3 cameraPos) {
+  for (int i = 0; i < PARTICLE_COUNT; i++) {
+    Particle* p = &pe->particles[i];
+
+    vec3 pos = (vec3(p->x, p->y, p->z)) + vec3(pe->x, pe->y, pe->z);
+
+    p->distanceFromCameraSquared = vec3LengthSquared(pos - cameraPos);
+  }
+
+  // NOTE(harrison): We use a simple bubble sort instead of something more
+  // complicated here for two reasons:
+  //
+  // 1. Most of the time the array will be PRETTY MUCH sorted.  Bubblesort is
+  // good at quickly switching two items in place without much
+  // overhead
+  // 2. It doesn't require us to use any external memory buffers.  Makes things
+  // a lot simpler.
+  //
+  // If I come back and benchmark this and it turns out to be a bottleneck,
+  // well then... We'll change it to something else.
+  //
+  // TODO(harrison): if we don't use depth mask do we even need this sorting?
+  Particle temp;
+  int i = 0;
+  int j = 0;
+
+  while (i < PARTICLE_COUNT) {
+    j = 0;
+    while (j < i) {
+      if (pe->particles[j].distanceFromCameraSquared > pe->particles[i].distanceFromCameraSquared) {
+        temp = pe->particles[j];
+        pe->particles[j] = pe->particles[i];
+        pe->particles[i] = temp;
+      }
+
+      j++;
+    }
+
+    i++;
+  }
+}
+
+void particleEmitter_render(ParticleEmitter pe) {
+  draw_setShader(shader(SHADER_particle));
+
+  shader_setMatrix(&draw.activeShader, "view", draw.view);
+  shader_setMatrix(&draw.activeShader, "projection", draw.projection);
+
+  shader_setInt(&draw.activeShader, "ourTexture", 0);
+  shader_setInt(&draw.activeShader, "colorMap", 1);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture(pe.particleShape).id);
+
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, texture(pe.colorMap).id);
+
+  glBindVertexArray(draw.quadVAO);
+
+  mat4 model = mat4d(1.0f);
+  vec3 pos;
+
+  glDepthMask(GL_FALSE);
+  for (int i = PARTICLE_COUNT - 1; i >= 0; i--) {
+    Particle p = pe.particles[i];
+
+    pos = vec3(p.x, p.y, p.z) + vec3(pe.x, pe.y, pe.z);
+
+    model = mat4Translate(mat4d(1.0f), pos);
+    model = mat4Translate(model, vec3(0.5f, 0.5f, 0.0f) * -1);
+
+    shader_setMatrix(&draw.activeShader, "model", model);
+    shader_setVec2(&draw.activeShader, "scale", vec2(p.scale, p.scale));
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+  }
+
+  glDepthMask(GL_TRUE);
+
+  glBindVertexArray(0);
+}
+
+#define CLOUD_COUNT (50)
 struct GameState {
   TimeIndex timeIndex;
   uint64 timelineNextTickTime;
@@ -62,7 +189,7 @@ struct GameState {
   GLuint shadowMap;
 
   // @Particles
-  Particle particles[PARTICLE_COUNT];
+  ParticleEmitter clouds[CLOUD_COUNT];
 };
 
 uint32 gameState_getCurrentFace(GameState *g) {
@@ -112,31 +239,34 @@ void gameState_init(State* state) {
   LornockMemory* m = lornockMemory;
   GameState* g = (GameState*) state->memory;
 
-  // @Particles Init
-  {
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
-      Particle p;
+  // @Clouds init
+  for (int i = 0; i < CLOUD_COUNT; i++) {
+    real32 x = rand01() * 10.0f;
+    real32 y = rand01() * 10.0f;
+    real32 z = rand01() * 10.0f;
 
-      p.x = (rand01() * 2 - 1) * PARTICLE_CLOUD_W;
-      p.y = (rand01() * 2 - 1) * PARTICLE_CLOUD_H;
-      p.z = (rand01() * 2 - 1) * PARTICLE_CLOUD_D;
+    x *= (rand01() < 0.5 ? -1 : 1);
+    y *= (rand01() < 0.5 ? -1 : 1);
+    z *= (rand01() < 0.5 ? -1 : 1);
 
-      logfln("%f %f %f", p.x, p.y, p.z);
+    if (vec3LengthSquared(vec3(x, y, z)) < (WORLD_WIDTH*2.5f) * (WORLD_WIDTH*2.5f)) {
+      i -= 1;
 
-      p.scale = rand01() * 0.5f + 0.5f,
-
-      p.alpha = (p.x * p.x)/(PARTICLE_CLOUD_W)*(PARTICLE_CLOUD_W) +
-          (p.y * p.y)/(PARTICLE_CLOUD_H)*(PARTICLE_CLOUD_H) +
-          (p.z * p.z)/(PARTICLE_CLOUD_D)*(PARTICLE_CLOUD_D);
-
-      if (p.alpha >= 1) {
-        i -= 1;
-
-        continue;
-      }
-
-      g->particles[i] = p;
+      continue;
     }
+
+    real32 w = randFromTo(0.5f, 1.5f) * PARTICLE_CLOUD_W;
+    real32 h = randFromTo(0.8f, 1.5f) * PARTICLE_CLOUD_H;
+    real32 d = randFromTo(0.5f, 1.5f) * PARTICLE_CLOUD_D;
+
+    g->clouds[i] = particleEmitter_init(x, y, z);
+
+    {
+      g->clouds[i].particleShape = TEXTURE_particle;
+      g->clouds[i].colorMap = (rand01() > 0.8f) ? TEXTURE_particle_color_map_red : TEXTURE_particle_color_map_blue;
+    }
+
+    particleEmitter_generateEllipsoid(&g->clouds[i], w, h, d);
   }
 
   timeline_init(&g->timeline, &lornockData->actionsArena);
@@ -244,7 +374,8 @@ void gameState_init(State* state) {
   assets_requestShader(SHADER_rectangle);
 
   assets_requestTexture(TEXTURE_particle);
-  assets_requestTexture(TEXTURE_particle_color_map);
+  assets_requestTexture(TEXTURE_particle_color_map_blue);
+  assets_requestTexture(TEXTURE_particle_color_map_red);
 
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
@@ -583,6 +714,7 @@ void gameState_render(GameState *g, RenderMode m) {
 
   // @Render
 
+  // @Asteroid render
   {
     vec3 asteroidPosition = vec3(0, 0, 0);
     vec3 asteroidOffset = vec3(-1.5f, -1.5f, -1.5f);
@@ -594,6 +726,7 @@ void gameState_render(GameState *g, RenderMode m) {
     draw_3d_mesh(g->worldMesh, model, texture(TEXTURE_rock));
   }
 
+  // @Player render
   {
     real32 scale = 0.4f;
 
@@ -605,6 +738,7 @@ void gameState_render(GameState *g, RenderMode m) {
     draw_3d_mesh(g->cubeMesh, model, texture(TEXTURE_test));
   }
 
+  //@Past Players render
   {
     for (int i = 0; i < MAX_PAST_PLAYERS; i++) {
       PastPlayer pp = g->pastPlayers[i];
@@ -624,7 +758,7 @@ void gameState_render(GameState *g, RenderMode m) {
     }
   }
 
-  // @Items
+  // @Items render
   {
     vec3 worldOffset = vec3(-1.5f, 1.5, -1.5f);
     vec3 modelOffset = vec3(0.5f, 0.0f, 0.5f);
@@ -671,90 +805,13 @@ void gameState_render(GameState *g, RenderMode m) {
   if (m == RENDER_MODE_NORMAL) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // @Particles
 
-    vec3 cameraPos = CAMERA_POSITION;
-    {
-      vec4 v = vec4(cameraPos.x, cameraPos.y, cameraPos.z, 1);
-
-      mat4 rot = mat4d(1.0f) * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
-      rot = rot * quatToMat4(g->cameraRotation);
-
-      v = rot * v;
-
-      cameraPos = vec3FromVec4(v);
+    // @Clouds render
+    for (int i = 0; i < CLOUD_COUNT; i++) {
+      particleEmitter_render(g->clouds[i]);
     }
 
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
-      Particle* p = &g->particles[i];
-
-      vec3 pos = (vec3(p->x, p->y, p->z)) + PARTICLE_ROOT;
-
-      p->distanceFromCameraSquared = vec3LengthSquared(pos - cameraPos);
-    }
-
-    {
-      // Simple bubble sort for now
-      // TODO(harrison): rewrite as a quicksort
-
-      Particle temp;
-      int i = 0;
-      int j = 0;
-
-      while (i < PARTICLE_COUNT) {
-        j = 0;
-        while (j < i) {
-          if (g->particles[j].distanceFromCameraSquared > g->particles[i].distanceFromCameraSquared) {
-            temp = g->particles[j];
-            g->particles[j] = g->particles[i];
-            g->particles[i] = temp;
-          }
-
-          j++;
-        }
-
-        i++;
-      }
-    }
-
-    draw_setShader(shader(SHADER_particle));
-
-    shader_setMatrix(&draw.activeShader, "view", draw.view);
-    shader_setMatrix(&draw.activeShader, "projection", draw.projection);
-
-    shader_setInt(&draw.activeShader, "ourTexture", 0);
-    shader_setInt(&draw.activeShader, "colorMap", 1);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle).id);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texture(TEXTURE_particle_color_map).id);
-
-    glBindVertexArray(draw.quadVAO);
-
-    mat4 model = mat4d(1.0f);
-
-    glDepthMask(GL_FALSE);
-    for (int i = PARTICLE_COUNT - 1; i >= 0; i--) {
-      Particle p = g->particles[i];
-
-      vec3 pos = vec3(p.x, p.y, p.z) + PARTICLE_ROOT;
-
-      model = mat4Translate(mat4d(1.0f), pos);
-      model = mat4Translate(model, vec3(0.5f, 0.5f, 0.0f) * -1);
-
-      shader_setMatrix(&draw.activeShader, "model", model);
-      shader_setVec2(&draw.activeShader, "scale", vec2(p.scale, p.scale));
-
-      glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
-
-    glDepthMask(GL_TRUE);
-
-    glBindVertexArray(0);
-
-    // @UI
+    // @UI render
     draw_2d_begin();
 
     char side[32] = "";
@@ -836,6 +893,23 @@ void gameState_render(GameState *g, RenderMode m) {
 void gameState_update(State *state) {
   GameState* g = (GameState*) state->memory;
   Timeline* tb = &g->timeline;
+
+  {
+    vec3 cameraPos = CAMERA_POSITION;
+
+    vec4 v = vec4(cameraPos.x, cameraPos.y, cameraPos.z, 1);
+
+    mat4 rot = mat4d(1.0f) * quatToMat4(quatFromPitchYawRoll(CAMERA_ROTATION_OFFSET, 0, 0));
+    rot = rot * quatToMat4(g->cameraRotation);
+
+    v = rot * v;
+
+    cameraPos = vec3FromVec4(v);
+
+    for (int i = 0; i < CLOUD_COUNT; i++) {
+      particleEmitter_update(&g->clouds[i], cameraPos);
+    }
+  }
 
   if (getTime() > g->timelineNextTickTime) {
     g->timelineNextTickTime = getTime() + TIMELINE_TICK_MS_INTERVAL;

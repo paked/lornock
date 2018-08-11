@@ -18,7 +18,13 @@
 #define vec3_print(v, name) { logfln( #name ": x = %f, y = %f, z = %f", v.x, v.y, v.z); }
 
 inline real32 rand01() {
-  return (real32)rand() / (double)RAND_MAX ;
+  return (real32)rand() / (real32)RAND_MAX;
+}
+
+inline real32 randFromTo(real32 min, real32 max) {
+  real32 amount = max - min;
+
+  return min + rand01() * amount;
 }
 
 real32 vec3Sum(vec3 v) {

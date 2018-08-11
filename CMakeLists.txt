@@ -75,7 +75,8 @@ set(DATA_FILES
     data/mesh/coal.obj
 
     data/img/particle.png
-    data/img/particle_color_map.png
+    data/img/particle_color_map_red.png
+    data/img/particle_color_map_blue.png
     data/img/player.png
     data/img/rock.png
     data/img/rock_albedo.png
