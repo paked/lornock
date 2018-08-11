@@ -12,8 +12,19 @@ Todo:
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 - Refactor code to use Quaternions 100% of the time
 - [ ] Create UI for time jump
+- Create star system
 
 In progress:
+- [ ] Simple particle system
+  - [x] Implement basic dust cloud system
+  - [ ] Have multiple cloud textures, vary particle szie
+  - [ ] Spawn dust particles within ellipsoid
+  - [ ] Fade alpha from center of cloud with `x^2/a^2 + y^2/b^2 + z^2/c^2` formula
+  - [ ] Add ability to have multiple clouds
+  - [ ] Profile code and determine if I need to optimise the particles
+    - Stop sorting each frame
+    - Use GPU instancing
+    - Simulate particles on the GPU
 - [ ] Remove cmake
   - [x] Create non-cmake build script for Windows
   - [ ] Create non-cmake build script for Linux

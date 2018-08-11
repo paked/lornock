@@ -4,14 +4,22 @@
 #include <entities/timeline.cpp>
 #include <entities/past_player.cpp>
 
-#define PARTICLE_MUL (10.0f)
 #define PARTICLE_ROOT (vec3(0.0f, 0.0f, -4.0f))
-#define PARTICLE_SPACING (0.5f)
-#define PARTICLE_COUNT (10)
+
+#define PARTICLE_CLOUD_W (1.0f)
+#define PARTICLE_CLOUD_D (1.0f)
+#define PARTICLE_CLOUD_H (0.5f)
+
+#define PARTICLE_MIN_SIZE (0.1f)
+#define PARTICLE_MAX_SIZE (0.5f)
+
+#define PARTICLE_COUNT (70)
 struct Particle {
   real32 x, y, z;
 
-  int id;
+  real32 scale;
+
+  real32 alpha;
 
   // For depth sorting
   real32 distanceFromCameraSquared;
@@ -107,11 +115,25 @@ void gameState_init(State* state) {
   // @Particles Init
   {
     for (int i = 0; i < PARTICLE_COUNT; i++) {
-      Particle p = {
-        (rand01() * 2 - 1) * PARTICLE_SPACING,
-        (rand01() * 2 - 1) * PARTICLE_SPACING,
-        (rand01() * 2 - 1) * PARTICLE_SPACING,
-      };
+      Particle p;
+
+      p.x = (rand01() * 2 - 1) * PARTICLE_CLOUD_W;
+      p.y = (rand01() * 2 - 1) * PARTICLE_CLOUD_H;
+      p.z = (rand01() * 2 - 1) * PARTICLE_CLOUD_D;
+
+      logfln("%f %f %f", p.x, p.y, p.z);
+
+      p.scale = rand01() * 0.5f + 0.5f,
+
+      p.alpha = (p.x * p.x)/(PARTICLE_CLOUD_W)*(PARTICLE_CLOUD_W) +
+          (p.y * p.y)/(PARTICLE_CLOUD_H)*(PARTICLE_CLOUD_H) +
+          (p.z * p.z)/(PARTICLE_CLOUD_D)*(PARTICLE_CLOUD_D);
+
+      if (p.alpha >= 1) {
+        i -= 1;
+
+        continue;
+      }
 
       g->particles[i] = p;
     }
@@ -699,7 +721,6 @@ void gameState_render(GameState *g, RenderMode m) {
 
     shader_setMatrix(&draw.activeShader, "view", draw.view);
     shader_setMatrix(&draw.activeShader, "projection", draw.projection);
-    shader_setVec2(&draw.activeShader, "scale", vec2(1.0f, 1.0f));
 
     shader_setInt(&draw.activeShader, "ourTexture", 0);
     shader_setInt(&draw.activeShader, "colorMap", 1);
@@ -724,6 +745,7 @@ void gameState_render(GameState *g, RenderMode m) {
       model = mat4Translate(model, vec3(0.5f, 0.5f, 0.0f) * -1);
 
       shader_setMatrix(&draw.activeShader, "model", model);
+      shader_setVec2(&draw.activeShader, "scale", vec2(p.scale, p.scale));
 
       glDrawArrays(GL_TRIANGLES, 0, 6);
     }
