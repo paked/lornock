@@ -36,7 +36,7 @@ ParticleEmitter particleEmitter_init(real32 x, real32 y, real32 z) {
   return pe;
 }
 
-void particleEmitter_generateEllipsoid(ParticleEmitter* pe, real32 w, real32 h, real32 d) {
+void particleEmitter_generateEllipsoidVolume(ParticleEmitter* pe, real32 w, real32 h, real32 d) {
   for (int i = 0; i < PARTICLE_COUNT; i++) {
     Particle p;
 
@@ -45,7 +45,7 @@ void particleEmitter_generateEllipsoid(ParticleEmitter* pe, real32 w, real32 h, 
     p.z = (rand01() * 2 - 1) * d;
 
     // Particles must be between 0.5 and 1.0f
-    p.scale = rand01() * 0.5f + 0.5f,
+    p.scale = rand01() * 0.5f + 0.5f;
 
     p.alpha =
       (p.x * p.x)/(w)*(w) +
@@ -58,6 +58,36 @@ void particleEmitter_generateEllipsoid(ParticleEmitter* pe, real32 w, real32 h, 
 
       continue;
     }
+
+    pe->particles[i] = p;
+  }
+}
+
+void particleEmitter_generateSphereSurface(ParticleEmitter* pe, real32 r) {
+  for (int i = 0; i < PARTICLE_COUNT; i++) {
+    Particle p;
+
+    real32 x = rand01() * r * 2;
+    real32 y = rand01() * r * 2;
+    real32 z = rand01() * r * 2;
+
+    x *= (rand01() < 0.5 ? -1 : 1);
+    y *= (rand01() < 0.5 ? -1 : 1);
+    z *= (rand01() < 0.5 ? -1 : 1);
+
+    if (vec3LengthSquared(vec3(x, y, z)) < r*r) {
+      i -= 1;
+
+      continue;
+    }
+
+    p.x = x;
+    p.y = y;
+    p.z = z;
+
+    p.scale = randFromTo(0.5f, 1.0f);
+
+    p.alpha = 1.0f;
 
     pe->particles[i] = p;
   }

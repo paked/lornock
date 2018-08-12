@@ -208,7 +208,7 @@ void ui_draw() {
 
             snprintf(str, 4, "%d", elem.count);
 
-            draw_text(str, textPos, 0.3f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
+            draw_text(str, textPos, 1.0f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
           }
         } break;
       default:

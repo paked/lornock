@@ -44,6 +44,7 @@ struct GameState {
 
   // @Particles
   ParticleEmitter clouds[CLOUD_COUNT];
+  ParticleEmitter stars;
 };
 
 uint32 gameState_getCurrentFace(GameState *g) {
@@ -120,8 +121,14 @@ void gameState_init(State* state) {
       g->clouds[i].colorMap = (rand01() > 0.8f) ? TEXTURE_particle_color_map_red : TEXTURE_particle_color_map_blue;
     }
 
-    particleEmitter_generateEllipsoid(&g->clouds[i], w, h, d);
+    particleEmitter_generateEllipsoidVolume(&g->clouds[i], w, h, d);
   }
+
+  // @Stars init
+  g->stars = particleEmitter_init(0, 0, 0);
+  g->stars.particleShape = TEXTURE_particle;
+  g->stars.colorMap = TEXTURE_particle_color_map_white;
+  particleEmitter_generateSphereSurface(&g->stars, 10.0f);
 
   timeline_init(&g->timeline, &lornockData->actionsArena);
   timeline_load(&g->timeline, "simple");
@@ -230,6 +237,7 @@ void gameState_init(State* state) {
   assets_requestTexture(TEXTURE_particle);
   assets_requestTexture(TEXTURE_particle_color_map_blue);
   assets_requestTexture(TEXTURE_particle_color_map_red);
+  assets_requestTexture(TEXTURE_particle_color_map_white);
 
   assets_requestTexture(TEXTURE_test);
   assets_requestTexture(TEXTURE_player);
@@ -582,7 +590,7 @@ void gameState_render(GameState *g, RenderMode m) {
 
   // @Player render
   {
-    real32 scale = 0.5f;
+    real32 scale = 0.25f;
 
     mat4 model = mat4d(1.0f);
     model = mat4Translate(model, g->playerPos);
@@ -661,6 +669,9 @@ void gameState_render(GameState *g, RenderMode m) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // @Stars render
+    particleEmitter_render(g->stars);
+
     // @Clouds render
     for (int i = 0; i < CLOUD_COUNT; i++) {
       particleEmitter_render(g->clouds[i]);
@@ -674,35 +685,35 @@ void gameState_render(GameState *g, RenderMode m) {
     switch (gameState_getCurrentFace(g)) {
       case BACK:
         {
-          strcpy(side, "back side");
+          strcpy(side, "back");
         } break;
       case FRONT:
         {
-          strcpy(side, "front side");
+          strcpy(side, "front");
         } break;
       case LEFT:
         {
-          strcpy(side, "left side");
+          strcpy(side, "left");
         } break;
       case RIGHT:
         {
-          strcpy(side, "right side");
+          strcpy(side, "right");
         } break;
       case TOP:
         {
-          strcpy(side, "top side");
+          strcpy(side, "top");
         } break;
       case BOTTOM:
         {
-          strcpy(side, "bottom side");
+          strcpy(side, "bottom");
         } break;
       default:
         {
-          strcpy(side, "unknown side");
+          strcpy(side, "unknown");
         } break;
     }
 
-    draw_text(side, vec2(getWindowWidth()/2, 50.0f), 1.0f, font(FONT_renogare), vec3_white, TEXT_ALIGN_CENTER);
+    draw_text(side, vec2(getWindowWidth() - 25.0f, 25.0f), 1.0f, font(FONT_renogare), vec3_white, TEXT_ALIGN_RIGHT | TEXT_ALIGN_CENTER_Y);
 
     ui_begin(font(FONT_quicksand_regular));
 

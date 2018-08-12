@@ -159,6 +159,8 @@ void draw_sprite(Rect rect, Texture t) {
 #define TEXT_ALIGN_LEFT 0
 #define TEXT_ALIGN_CENTER_X 0x01
 #define TEXT_ALIGN_CENTER_Y 0x02
+#define TEXT_ALIGN_RIGHT 0x04
+
 #define TEXT_ALIGN_CENTER (TEXT_ALIGN_CENTER_X | TEXT_ALIGN_CENTER_Y)
 
 void draw_text(char* text, vec2 pos, real32 scale, Font f, vec3 color = vec3_white, int8 flags=(TEXT_ALIGN_LEFT|TEXT_ALIGN_CENTER_Y)) {
@@ -166,6 +168,8 @@ void draw_text(char* text, vec2 pos, real32 scale, Font f, vec3 color = vec3_whi
 
   if (flags & TEXT_ALIGN_CENTER_X) {
     pos.x -= font_getStringWidth(f, text, scale)/2.0f;
+  } else if (flags & TEXT_ALIGN_RIGHT) {
+    pos.x -= font_getStringWidth(f, text, scale);
   }
 
   pos.y -= f.baseLine * scale;

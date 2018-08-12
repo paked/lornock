@@ -77,6 +77,7 @@ set(DATA_FILES
     data/img/particle.png
     data/img/particle_color_map_red.png
     data/img/particle_color_map_blue.png
+    data/img/particle_color_map_white.png
     data/img/player.png
     data/img/rock.png
     data/img/rock_albedo.png
