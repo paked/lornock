@@ -438,7 +438,7 @@ void gameState_timeJump(GameState *g, int64 destination) {
 
 bool gameState_pickup(GameState* g, uint32 item) {
   // Firstly try and fit it into an existing stack
-  for (int i = 0; i < INVENTORY_SIZE; i++) {
+  for (int i = g->timeline.info.inventory.currentSlot; i < INVENTORY_SIZE; i++) {
     InventorySlot* slot = &g->timeline.info.inventory.hotbar[i];
 
     if (slot->type == item && slot->count < INVENTORY_MAX_STACK_SIZE) {
@@ -748,6 +748,34 @@ void gameState_render(GameState *g, RenderMode m) {
       }
 
       ui_toolbarEnd();
+    }
+
+    {
+      ui_windowBegin(uiid_gen(), 0.7f, 0.7f);
+
+      for (int i = 0; i < INVENTORY_SIZE; i++) {
+        InventorySlot item = g->timeline.info.inventory.hotbar[i];
+
+        uint32 tex = MAX_TEXTURE;
+
+        switch (item.type) {
+          case BLOCK_ROCK:
+            {
+              tex = TEXTURE_rock_icon;
+            } break;
+          case BLOCK_COAL:
+            {
+              tex = TEXTURE_coal_icon;
+            } break;
+        }
+
+        ui_box(uiid_genEx(i),
+            tex,
+            false,
+            item.count);
+      }
+
+      ui_windowEnd();
     }
 
     ui_end();

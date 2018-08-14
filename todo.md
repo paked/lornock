@@ -12,10 +12,9 @@ Todo:
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 - Refactor code to use Quaternions 100% of the time
 - [ ] Create UI for time jump
-- Create star system
 
 In progress:
-- [ ] Create more cells in the world
+- Create star system
 - [ ] Simple particle system
   - [x] Implement basic dust cloud system
   - [x] Have multiple cloud textures, vary particle szie
@@ -37,6 +36,7 @@ In progress:
   - [ ] Display the player quad the correct orientation (perpendicular to the face it's on, face towards the camera)
 
 Done:
+- [x] Create more cells in the world
 - [x] Create basic UI toolkit
   - [x] Render rectangle
   - [x] Render icons

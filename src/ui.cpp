@@ -27,36 +27,52 @@ bool operator==(UIID l, UIID r) {
 }
 
 enum {
+  UI_ELEMENT_WINDOW,
+  UI_ELEMENT_BOX,
   UI_ELEMENT_TOOLBAR,
   UI_ELEMENT_TOOLBAR_OPTION
+};
+
+struct UIElement_Window {
+  vec2 next;
+};
+
+#define UI_ELEMENT_BOX_WIDTH (75.0f)
+#define UI_ELEMENT_BOX_HEIGHT (75.0f)
+struct UIElement_Box {
+  uint32 textureID;
+  int itemCount;
+  bool selected;
+};
+
+struct UIElement_Toolbar {
+  real32 offset;
+};
+
+struct UIElement_ToolbarOption {
+  UIID parent;
+  bool hasTexture;
+  uint32 textureID;
+
+  int count;
+  bool selected;
 };
 
 struct UIElement {
   UIID id;
   uint32 type;
+  bool touched;
 
   Rect rect;
 
   union {
-    struct { // Toolbar
-      real32 offset;
-    };
+    UIElement_Window window;
+    UIElement_Box box;
 
-    struct { // Toolbar option
-      UIID parent;
-      bool hasTexture;
-      uint32 textureID;
-
-      int count;
-      bool selected;
-    };
+    UIElement_Toolbar toolbar;
+    UIElement_ToolbarOption toolbarOption;
   };
 };
-
-#define UI_ALIGN_LEFT 0x00
-#define UI_ALIGN_RIGHT 0x01
-#define UI_ALIGN_BOTTOM 0x02
-#define UI_ALIGN_TOP 0x04
 
 #define UI_ELEMENT_TOOLBAR_OPTION_SIZE 75
 #define UI_ELEMENT_TOOLBAR_PADDING 2
@@ -68,6 +84,7 @@ struct {
   uint32 elementCount;
 
   UIElement *parent;
+  UIElement *window;
 
   real32 nextX;
   real32 nextY;
@@ -98,6 +115,88 @@ void ui_begin(Font f) {
 
 void ui_end() {}
 
+void ui_windowBegin(UIID id, real32 w, real32 h) {
+  UIElement* e = ui_getElement(id);
+  if (e == 0) {
+    e = &ui.elements[ui.elementCount];
+    e->type = UI_ELEMENT_WINDOW;
+    e->id = id;
+
+    ui.elementCount += 1;
+
+    ensure(ui.elementCount < UI_MAX_ELEMENTS);
+  }
+
+  ensure(e->type == UI_ELEMENT_WINDOW);
+
+  real32 width = getWindowWidth() * w;
+  real32 height = getWindowHeight() * h;
+
+  e->rect = rect_init(
+      (getWindowWidth() - width)/2,
+      (getWindowHeight() - height)/2,
+      width,
+      height);
+
+  e->window.next = vec2(e->rect.x, e->rect.y);
+
+  ui.window = e;
+}
+
+void ui_windowEnd() {
+  ui.window = 0;
+}
+
+void ui_box(UIID id, uint32 texture, bool selected, int count = 0) {
+  UIElement* e = ui_getElement(id);
+  if (e == 0) {
+    e = &ui.elements[ui.elementCount];
+    e->id = id;
+    e->type = UI_ELEMENT_BOX;
+
+    ui.elementCount += 1;
+    ensure(ui.elementCount < UI_MAX_ELEMENTS);
+  }
+
+  ensure(e->type == UI_ELEMENT_BOX);
+
+  // NOTE(harrison): SUPER HACKY AND MAYBE UNCLEAR POSITIONING CODE.
+  real32 extraSpace = 0.0f;
+  real32 elemCount = 0.0f;
+
+  {
+    extraSpace = fmodf(ui.window->rect.w, UI_ELEMENT_BOX_WIDTH);
+    elemCount = (ui.window->rect.w - extraSpace) / UI_ELEMENT_BOX_WIDTH;
+  }
+
+  real32 paddingx = extraSpace/elemCount;
+
+  {
+    extraSpace = fmodf(ui.window->rect.h, UI_ELEMENT_BOX_HEIGHT);
+    elemCount = (ui.window->rect.h - extraSpace) / UI_ELEMENT_BOX_HEIGHT;
+  }
+
+  real32 paddingy = extraSpace/elemCount;
+
+  Rect r = rect_init(0, 0, UI_ELEMENT_BOX_WIDTH, UI_ELEMENT_BOX_HEIGHT);
+
+  if (ui.window->window.next.x + r.w + paddingx > ui.window->rect.x + ui.window->rect.w) {
+    ui.window->window.next.x = ui.window->rect.x;
+    ui.window->window.next.y += UI_ELEMENT_BOX_HEIGHT + paddingy/2; 
+  }
+
+  r.x = paddingx/2 + ui.window->window.next.x;
+  r.y = ui.window->window.next.y + paddingy/2;
+
+  e->rect = r;
+
+  ui.window->window.next.x = r.x + r.w + paddingx/2;
+
+  e->box.textureID = texture;
+  e->box.itemCount = count;
+  e->box.selected = selected;
+}
+
 void ui_toolbarBegin(UIID id) {
   UIElement* e = ui_getElement(id);
   if (e == 0) {
@@ -109,7 +208,9 @@ void ui_toolbarBegin(UIID id) {
     ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
 
-  e->offset = 0;
+  ensure(e->type == UI_ELEMENT_TOOLBAR);
+
+  e->toolbar.offset = 0;
   e->rect = rect_init(getWindowWidth()/2, getWindowHeight()-UI_ELEMENT_TOOLBAR_OPTION_SIZE, 0, UI_ELEMENT_TOOLBAR_OPTION_SIZE);
 
   ui.parent = e;
@@ -118,8 +219,8 @@ void ui_toolbarBegin(UIID id) {
 void ui_toolbarEnd() {
   ensure(ui.parent != 0 && ui.parent->type == UI_ELEMENT_TOOLBAR);
 
-  ui.parent->rect.x -= ui.parent->offset/2;
-  ui.parent->rect.w = ui.parent->offset;
+  ui.parent->rect.x -= ui.parent->toolbar.offset/2;
+  ui.parent->rect.w = ui.parent->toolbar.offset;
 
   ui.parent = 0;
 }
@@ -137,24 +238,27 @@ void ui_toolbarOption(UIID id, bool selected, int count, uint32 tex=MAX_TEXTURE)
     ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
 
+  ensure(e->type == UI_ELEMENT_TOOLBAR_OPTION);
+
   if (tex == MAX_TEXTURE) {
-    e->hasTexture = false;
+    e->toolbarOption.hasTexture = false;
   } else {
-    e->hasTexture = true;
-    e->textureID = tex;
+    e->toolbarOption.hasTexture = true;
+    e->toolbarOption.textureID = tex;
   }
 
-  e->count = count;
+  e->toolbarOption.count = count;
 
-  e->selected = selected;
+  e->toolbarOption.selected = selected;
 
-  e->parent = ui.parent->id;
+  e->toolbarOption.parent = ui.parent->id;
 
-  UIElement* parent = ui_getElement(e->parent);
+  UIElement* parent = ui_getElement(e->toolbarOption.parent);
+  ensure(parent->type == UI_ELEMENT_TOOLBAR);
 
-  e->rect = rect_init(parent->offset, 0, UI_ELEMENT_TOOLBAR_OPTION_SIZE, UI_ELEMENT_TOOLBAR_OPTION_SIZE);
+  e->rect = rect_init(parent->toolbar.offset, 0, UI_ELEMENT_TOOLBAR_OPTION_SIZE, UI_ELEMENT_TOOLBAR_OPTION_SIZE);
 
-  parent->offset += e->rect.w + UI_ELEMENT_TOOLBAR_PADDING;
+  parent->toolbar.offset += e->rect.w + UI_ELEMENT_TOOLBAR_PADDING;
 }
 
 void ui_draw() {
@@ -162,6 +266,43 @@ void ui_draw() {
     UIElement elem = ui.elements[i];
 
     switch (elem.type) {
+      case UI_ELEMENT_WINDOW:
+        {
+          Rect r = elem.rect;
+
+          draw_rectangle(r, vec4(115, 115, 115, 0.8f));
+        } break;
+      case UI_ELEMENT_BOX:
+        {
+          Rect r = elem.rect;
+
+          UIElement_Box box = elem.box;
+
+          draw_rectangle(r, vec4(200, 200, 200, 1.f));
+
+          if (box.textureID != MAX_TEXTURE) {
+            draw_sprite(elem.rect, texture(box.textureID));
+          }
+
+          if (box.itemCount > 0) {
+            float countWidth = 30;
+            Rect r = elem.rect;
+            r.x += r.w - countWidth;
+            r.y += r.h - countWidth;
+            r.w = countWidth;
+            r.h = countWidth;
+
+            draw_rectangle(r, vec4(0, 0, 0, 0.5f));
+
+            vec2 textPos = vec2(r.x + r.w/2, r.y + r.h/2);
+
+            char str[4] = {0};
+
+            snprintf(str, 4, "%d", box.itemCount);
+
+            draw_text(str, textPos, 1.0f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
+          }
+        } break;
       case UI_ELEMENT_TOOLBAR:
         {
           Rect r = elem.rect;
@@ -175,11 +316,13 @@ void ui_draw() {
 
       case UI_ELEMENT_TOOLBAR_OPTION:
         {
-          UIElement* p = ui_getElement(elem.parent);
+          UIElement_ToolbarOption toolbarOption = elem.toolbarOption;
+
+          UIElement* p = ui_getElement(toolbarOption.parent);
 
           vec4 color = vec4(10, 10, 60, 1.0f);
 
-          if (elem.selected) {
+          if (toolbarOption.selected) {
             color = vec4(30, 30, 100, 1.0f);
           }
 
@@ -188,11 +331,11 @@ void ui_draw() {
 
           draw_rectangle(elem.rect, color);
 
-          if (elem.hasTexture) {
-            draw_sprite(elem.rect, texture(elem.textureID));
+          if (toolbarOption.hasTexture) {
+            draw_sprite(elem.rect, texture(toolbarOption.textureID));
           }
 
-          if (elem.count > 0) {
+          if (toolbarOption.count > 0) {
             float countWidth = 30;
             Rect r = elem.rect;
             r.x += UI_ELEMENT_TOOLBAR_OPTION_SIZE - countWidth;
@@ -206,7 +349,7 @@ void ui_draw() {
 
             char str[4] = {0};
 
-            snprintf(str, 4, "%d", elem.count);
+            snprintf(str, 4, "%d", toolbarOption.count);
 
             draw_text(str, textPos, 1.0f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
           }
