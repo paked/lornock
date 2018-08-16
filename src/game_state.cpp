@@ -5,7 +5,7 @@
 #include <entities/past_player.cpp>
 #include <entities/particles.cpp>
 
-#define CLOUD_COUNT (50)
+#define CLOUD_COUNT (10)
 struct GameState {
   TimeIndex timeIndex;
   uint64 timelineNextTickTime;
@@ -749,6 +749,7 @@ void gameState_render(GameState *g, RenderMode m) {
 
       ui_toolbarEnd();
     }
+    /*
 
     {
       ui_windowBegin(uiid_gen(), 0.7f, 0.7f);
@@ -776,7 +777,7 @@ void gameState_render(GameState *g, RenderMode m) {
       }
 
       ui_windowEnd();
-    }
+    }*/
 
     ui_end();
 

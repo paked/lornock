@@ -12,6 +12,7 @@ Todo:
 - FIX THE FUCKING QUAT FROM PITCH YAW ROLL FUNCTION!
 - Refactor code to use Quaternions 100% of the time
 - [ ] Create UI for time jump
+- [ ] Rewrite UI system so that it is more general purpose and can handle the semi-complex layouts I desire
 
 In progress:
 - Create star system
