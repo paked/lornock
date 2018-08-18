@@ -78,6 +78,7 @@ struct UIElement {
 #define UI_ELEMENT_TOOLBAR_PADDING 2
 
 #define UI_MAX_ELEMENTS 128
+#define UI_MAX_DEPTH 10
 
 struct {
   UIElement elements[UI_MAX_ELEMENTS];
@@ -86,8 +87,9 @@ struct {
   UIElement *parent;
   UIElement *window;
 
-  real32 nextX;
-  real32 nextY;
+  int paneStackCount;
+  Rect paneStack[UI_MAX_DEPTH];
+  vec2 next;
 
   Font font;
 } ui = {0};
@@ -104,16 +106,102 @@ UIElement* ui_getElement(UIID id) {
   return 0;
 }
 
+void ui_pane_push(Rect r) {
+  ui.paneStack[ui.paneStackCount] = r;
+  ui.paneStackCount += 1;
+
+  ui.next = {0};
+}
+
+void ui_pane_pop() {
+  ui.paneStackCount -= 1;
+}
+
 void ui_begin(Font f) {
-  ui.nextX = 0;
-  ui.nextY = 0;
+  ui.next = {0};
 
   ui.parent = 0;
 
   ui.font = f;
+
+  ui.paneStackCount = 0;
 }
 
 void ui_end() {}
+
+UIElement* ui_initElement(UIID id, uint32 type) {
+  UIElement* e = &ui.elements[ui.elementCount];
+  e->type = type;
+  e->id = id;
+
+  ui.elementCount += 1;
+  ensure(ui.elementCount < UI_MAX_ELEMENTS);
+
+  return e;
+}
+
+void ui_window_begin(UIID id, real32 w, real32 h, int8 flags=0) {
+  UIElement* e = ui_getElement(id);
+  if (e == 0) {
+    e = ui_initElement(id, UI_ELEMENT_WINDOW);
+  }
+
+  ensure(e->type == UI_ELEMENT_WINDOW);
+
+  e->rect = rect_init(0, 0, w, h);
+
+  ui_pane_push(e->rect);
+
+  ui.window = e;
+}
+
+void ui_box_(UIID id, uint32 texture, bool selected, int count = 0) {
+  UIElement* e = ui_getElement(id);
+  if (e == 0) {
+    e = ui_initElement(id, UI_ELEMENT_BOX);
+  }
+
+  ensure(e->type == UI_ELEMENT_BOX);
+
+  e->box.textureID = texture;
+  e->box.itemCount = count;
+  e->box.selected = selected;
+
+  // ui_getPos
+  
+  {
+    real32 w = UI_ELEMENT_BOX_WIDTH;
+    real32 h = UI_ELEMENT_BOX_HEIGHT;
+
+    Rect currentPane = ui.paneStack[ui.paneStackCount - 1];
+
+    if (ui.next.x + w > currentPane.x + currentPane.w) {
+      logln("fuck");
+
+      ui.next.x = 0;
+      ui.next.y += h;
+    }
+
+    vec2 wpos = {0};
+
+    for (int i = 0; i < ui.paneStackCount; i++) {
+      wpos.x += ui.paneStack[i].x;
+      wpos.y += ui.paneStack[i].y;
+    }
+
+    wpos += ui.next;
+
+    e->rect = rect_init(wpos.x, wpos.y, w, h);
+  }
+}
+
+void ui_window_end() {
+  ensure(ui.window != 0 && ui.window->type == UI_ELEMENT_WINDOW);
+  
+  ui.window = 0;
+
+  ui_pane_pop();
+}
 
 void ui_windowBegin(UIID id, real32 w, real32 h) {
   UIElement* e = ui_getElement(id);

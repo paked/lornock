@@ -717,6 +717,54 @@ void gameState_render(GameState *g, RenderMode m) {
 
     ui_begin(font(FONT_quicksand_regular));
 
+
+    ui_window_begin(uiid_gen(), 400, 400);
+
+    {
+      ui_box_(uiid_gen(), TEXTURE_rock_icon, true, 10);
+
+      ui_pane_push(Rect{200, 0, 300, 400});
+
+      ui_box_(uiid_gen(), TEXTURE_coal_icon, true, 10);
+
+      ui_pane_pop();
+    }
+
+    ui_window_end();
+
+    /*
+    ui_window_begin(uiid_gen(), 400, 400, UI_ALIGN_CENTER); // pane: 400, 400
+
+    ui_pane_push(Rect{0, 0, 200, 400});
+
+    {
+      ui_text(uiid_gen(), "Searching...", vec3_one * 0.7f);
+
+      // Force a newline
+      ui_break();
+
+      // Each list item fills up the entire length of the pane
+      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Green Rock");
+      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Blue Rock");
+      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Stew Rock");
+      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Who Rock");
+    }
+
+    ui_divider(uiid_gen(), UI_ALIGN_RIGHT);
+
+    ui_pane_pop();
+
+    ui_pane_push(Rect{200, 0, 200, 400});
+
+    {
+      // for each item in inventory
+      ui_inventoryItem(uiid_gen(), TEXTURE_rock_icon, true);
+    }
+
+    ui_pane_pop();
+
+    ui_window_end();*/
+
     {
       ui_toolbarBegin(uiid_gen());
 
