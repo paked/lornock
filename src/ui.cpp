@@ -30,11 +30,19 @@ enum {
   UI_ELEMENT_WINDOW,
   UI_ELEMENT_BOX,
   UI_ELEMENT_TOOLBAR,
-  UI_ELEMENT_TOOLBAR_OPTION
+  UI_ELEMENT_TOOLBAR_OPTION,
+  UI_ELEMENT_TEXT
 };
 
 struct UIElement_Window {
   vec2 next;
+};
+
+// TODO(harrison): switch to a UI specific MemoryArena so we can have REAL text
+// buffers. None of this 256 char only bullshit.
+struct UIElement_Text {
+  real32 scale;
+  char text[256];
 };
 
 #define UI_ELEMENT_BOX_WIDTH (75.0f)
@@ -69,6 +77,8 @@ struct UIElement {
     UIElement_Window window;
     UIElement_Box box;
 
+    UIElement_Text text;
+
     UIElement_Toolbar toolbar;
     UIElement_ToolbarOption toolbarOption;
   };
@@ -90,6 +100,7 @@ struct {
   int paneStackCount;
   Rect paneStack[UI_MAX_DEPTH];
   vec2 next;
+  real32 lastHeight;
 
   Font font;
 } ui = {0};
@@ -127,7 +138,11 @@ void ui_begin(Font f) {
   ui.paneStackCount = 0;
 }
 
-void ui_end() {}
+void ui_end() {
+  for (uint32 i = 0; i < ui.elementCount; i++) {
+    ui.elements[i].touched = false;
+  }
+}
 
 UIElement* ui_initElement(UIID id, uint32 type) {
   UIElement* e = &ui.elements[ui.elementCount];
@@ -140,26 +155,95 @@ UIElement* ui_initElement(UIID id, uint32 type) {
   return e;
 }
 
-void ui_window_begin(UIID id, real32 w, real32 h, int8 flags=0) {
+void ui_getPos(Rect* r) {
+  real32 w = r->w;
+  real32 h = r->h;
+
+  int paneIndex = ui.paneStackCount - 1;
+  ensure (paneIndex >= 0 && paneIndex < UI_MAX_DEPTH - 1);
+
+  Rect currentPane = ui.paneStack[paneIndex];
+
+  if (ui.next.x + w > currentPane.w) {
+    ui.next.x = 0;
+    ui.next.y += h;
+  }
+
+  vec2 wpos = {0};
+
+  for (int i = 0; i < ui.paneStackCount; i++) {
+    wpos.x += ui.paneStack[i].x;
+    wpos.y += ui.paneStack[i].y;
+  }
+
+  wpos += ui.next;
+
+  r->x = wpos.x;
+  r->y = wpos.y;
+
+  ui.next.x += w;
+  ui.lastHeight = h;
+}
+
+void ui_break() {
+  ui.next.x = 0;
+  ui.next.y += ui.lastHeight;
+}
+
+#define UI_ALIGN_LEFT (0)
+#define UI_ALIGN_CENTER_X (0x1)
+#define UI_ALIGN_CENTER_Y (0x2)
+#define UI_ALIGN_CENTER (UI_ALIGN_CENTER_X | UI_ALIGN_CENTER_Y)
+#define UI_ALIGN_RIGHT (0x04)
+
+#define ui_window_begin(width, height, flags) (ui_window_begin_(uiid_gen(), width, height, flags))
+void ui_window_begin_(UIID id, real32 w, real32 h, int8 flags=0) {
   UIElement* e = ui_getElement(id);
   if (e == 0) {
     e = ui_initElement(id, UI_ELEMENT_WINDOW);
   }
 
+  e->touched = true;
+
   ensure(e->type == UI_ELEMENT_WINDOW);
 
-  e->rect = rect_init(0, 0, w, h);
+  real32 ww = getWindowWidth();
+  real32 wh = getWindowHeight();
+
+  real32 x = 0;
+  real32 y = 0;
+
+  if (flags & UI_ALIGN_CENTER_X) {
+    x = (ww - w)/2.f;
+  }
+
+  if (flags & UI_ALIGN_CENTER_Y) {
+    y = (wh - h)/2.f;
+  }
+
+  e->rect = rect_init(x, y, w, h);
 
   ui_pane_push(e->rect);
 
   ui.window = e;
 }
 
+void ui_window_end() {
+  ensure(ui.window != 0 && ui.window->type == UI_ELEMENT_WINDOW);
+
+  ui.window = 0;
+
+  ui_pane_pop();
+}
+
+#define ui_box(texture, selected, count) (ui_box_(uiid_gen(), texture, selected, count))
+#define ui_boxi(i, texture, selected, count) (ui_box_(uiid_genEx(i), texture, selected, count))
 void ui_box_(UIID id, uint32 texture, bool selected, int count = 0) {
   UIElement* e = ui_getElement(id);
   if (e == 0) {
     e = ui_initElement(id, UI_ELEMENT_BOX);
   }
+  e->touched = true;
 
   ensure(e->type == UI_ELEMENT_BOX);
 
@@ -168,121 +252,37 @@ void ui_box_(UIID id, uint32 texture, bool selected, int count = 0) {
   e->box.selected = selected;
 
   // ui_getPos
-  
-  {
-    real32 w = UI_ELEMENT_BOX_WIDTH;
-    real32 h = UI_ELEMENT_BOX_HEIGHT;
+  real32 w = UI_ELEMENT_BOX_WIDTH;
+  real32 h = UI_ELEMENT_BOX_HEIGHT;
+  e->rect = rect_init(0, 0, w, h);
 
-    Rect currentPane = ui.paneStack[ui.paneStackCount - 1];
-
-    if (ui.next.x + w > currentPane.x + currentPane.w) {
-      logln("fuck");
-
-      ui.next.x = 0;
-      ui.next.y += h;
-    }
-
-    vec2 wpos = {0};
-
-    for (int i = 0; i < ui.paneStackCount; i++) {
-      wpos.x += ui.paneStack[i].x;
-      wpos.y += ui.paneStack[i].y;
-    }
-
-    wpos += ui.next;
-
-    e->rect = rect_init(wpos.x, wpos.y, w, h);
-  }
+  ui_getPos(&e->rect);
 }
 
-void ui_window_end() {
-  ensure(ui.window != 0 && ui.window->type == UI_ELEMENT_WINDOW);
-  
-  ui.window = 0;
-
-  ui_pane_pop();
-}
-
-void ui_windowBegin(UIID id, real32 w, real32 h) {
+#define ui_text(text) (ui_text_(uiid_gen(), text))
+#define ui_texti(i, text) (ui_text_(uiid_genEx(i), text))
+#define ui_textEx(text, scale) (ui_text_(uiid_gen(), text, scale))
+#define ui_textExi(i, text, scale) (ui_text_(uiid_genEx(i), text, scale))
+void ui_text_(UIID id, const char* text, real32 scale = 1.0f) {
   UIElement* e = ui_getElement(id);
   if (e == 0) {
-    e = &ui.elements[ui.elementCount];
-    e->type = UI_ELEMENT_WINDOW;
-    e->id = id;
-
-    ui.elementCount += 1;
-
-    ensure(ui.elementCount < UI_MAX_ELEMENTS);
+    e = ui_initElement(id, UI_ELEMENT_TEXT);
   }
+  e->touched = true;
 
-  ensure(e->type == UI_ELEMENT_WINDOW);
+  ensure(e->type == UI_ELEMENT_TEXT);
 
-  real32 width = getWindowWidth() * w;
-  real32 height = getWindowHeight() * h;
+  MemoryIndex s = strlen(text);
 
-  e->rect = rect_init(
-      (getWindowWidth() - width)/2,
-      (getWindowHeight() - height)/2,
-      width,
-      height);
+  ensure(s < 256);
 
-  e->window.next = vec2(e->rect.x, e->rect.y);
+  strncpy(e->text.text, text, s);
 
-  ui.window = e;
-}
+  real32 w = font_getStringWidth(ui.font, e->text.text, scale);
+  real32 h = font_getStringHeight(ui.font, scale);
+  e->rect = rect_init(0, 0, w, h);
 
-void ui_windowEnd() {
-  ui.window = 0;
-}
-
-void ui_box(UIID id, uint32 texture, bool selected, int count = 0) {
-  UIElement* e = ui_getElement(id);
-  if (e == 0) {
-    e = &ui.elements[ui.elementCount];
-    e->id = id;
-    e->type = UI_ELEMENT_BOX;
-
-    ui.elementCount += 1;
-    ensure(ui.elementCount < UI_MAX_ELEMENTS);
-  }
-
-  ensure(e->type == UI_ELEMENT_BOX);
-
-  // NOTE(harrison): SUPER HACKY AND MAYBE UNCLEAR POSITIONING CODE.
-  real32 extraSpace = 0.0f;
-  real32 elemCount = 0.0f;
-
-  {
-    extraSpace = fmodf(ui.window->rect.w, UI_ELEMENT_BOX_WIDTH);
-    elemCount = (ui.window->rect.w - extraSpace) / UI_ELEMENT_BOX_WIDTH;
-  }
-
-  real32 paddingx = extraSpace/elemCount;
-
-  {
-    extraSpace = fmodf(ui.window->rect.h, UI_ELEMENT_BOX_HEIGHT);
-    elemCount = (ui.window->rect.h - extraSpace) / UI_ELEMENT_BOX_HEIGHT;
-  }
-
-  real32 paddingy = extraSpace/elemCount;
-
-  Rect r = rect_init(0, 0, UI_ELEMENT_BOX_WIDTH, UI_ELEMENT_BOX_HEIGHT);
-
-  if (ui.window->window.next.x + r.w + paddingx > ui.window->rect.x + ui.window->rect.w) {
-    ui.window->window.next.x = ui.window->rect.x;
-    ui.window->window.next.y += UI_ELEMENT_BOX_HEIGHT + paddingy/2; 
-  }
-
-  r.x = paddingx/2 + ui.window->window.next.x;
-  r.y = ui.window->window.next.y + paddingy/2;
-
-  e->rect = r;
-
-  ui.window->window.next.x = r.x + r.w + paddingx/2;
-
-  e->box.textureID = texture;
-  e->box.itemCount = count;
-  e->box.selected = selected;
+  ui_getPos(&e->rect);
 }
 
 void ui_toolbarBegin(UIID id) {
@@ -295,6 +295,7 @@ void ui_toolbarBegin(UIID id) {
     ui.elementCount += 1;
     ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
+  e->touched = true;
 
   ensure(e->type == UI_ELEMENT_TOOLBAR);
 
@@ -325,6 +326,7 @@ void ui_toolbarOption(UIID id, bool selected, int count, uint32 tex=MAX_TEXTURE)
     ui.elementCount += 1;
     ensure(ui.elementCount < UI_MAX_ELEMENTS);
   }
+  e->touched = true;
 
   ensure(e->type == UI_ELEMENT_TOOLBAR_OPTION);
 
@@ -352,6 +354,10 @@ void ui_toolbarOption(UIID id, bool selected, int count, uint32 tex=MAX_TEXTURE)
 void ui_draw() {
   for (uint32 i = 0; i < ui.elementCount; i++) {
     UIElement elem = ui.elements[i];
+
+    if (!elem.touched) {
+      continue;
+    }
 
     switch (elem.type) {
       case UI_ELEMENT_WINDOW:
@@ -391,6 +397,12 @@ void ui_draw() {
             draw_text(str, textPos, 1.0f, ui.font, vec3_white, TEXT_ALIGN_CENTER);
           }
         } break;
+      case UI_ELEMENT_TEXT:
+        {
+          UIElement_Text text = elem.text;
+
+          draw_text(text.text, vec2(elem.rect.x, elem.rect.y), 1.0f, ui.font, vec3_white, TEXT_ALIGN_LEFT);
+        } break;
       case UI_ELEMENT_TOOLBAR:
         {
           Rect r = elem.rect;
@@ -401,7 +413,6 @@ void ui_draw() {
 
           draw_rectangle(r, vec4(115, 115, 115, 1.0f));
         } break;
-
       case UI_ELEMENT_TOOLBAR_OPTION:
         {
           UIElement_ToolbarOption toolbarOption = elem.toolbarOption;

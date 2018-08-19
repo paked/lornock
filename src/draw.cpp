@@ -175,6 +175,8 @@ void draw_text(char* text, vec2 pos, real32 scale, Font f, vec3 color = vec3_whi
   pos.y -= f.baseLine * scale;
   if (flags & TEXT_ALIGN_CENTER_Y) {
     pos.y += (f.pixelHeight * scale)/2.0f;
+  } else {
+    pos.y += (f.pixelHeight * scale);
   }
 
   {

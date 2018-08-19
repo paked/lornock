@@ -717,54 +717,36 @@ void gameState_render(GameState *g, RenderMode m) {
 
     ui_begin(font(FONT_quicksand_regular));
 
+    if (keyDown(KEY_e)) {
+      ui_window_begin(getWindowWidth() * 0.6f, getWindowHeight() * 0.6f, UI_ALIGN_CENTER);
 
-    ui_window_begin(uiid_gen(), 400, 400);
+      {
+        ui_pane_push(Rect{0, 0, 190, 400}); {
+          ui_text("Hello world!");
 
-    {
-      ui_box_(uiid_gen(), TEXTURE_rock_icon, true, 10);
+          ui_break();
 
-      ui_pane_push(Rect{200, 0, 300, 400});
+          ui_box(TEXTURE_rock_icon, true, 10);
+          ui_box(TEXTURE_rock_icon, true, 10);
+          ui_box(TEXTURE_rock_icon, true, 10);
 
-      ui_box_(uiid_gen(), TEXTURE_coal_icon, true, 10);
+          ui_break();
 
-      ui_pane_pop();
+          ui_text("Hello world!");
+        } ui_pane_pop();
+
+        ui_pane_push(rect_init(210, 0, 190, 400)); {
+          ui_box(TEXTURE_coal_icon, true, 10);
+          ui_box(TEXTURE_coal_icon, true, 10);
+          ui_box(TEXTURE_coal_icon, true, 10);
+          ui_box(TEXTURE_coal_icon, true, 10);
+        } ui_pane_pop();
+      }
+
+      ui_window_end();
     }
 
-    ui_window_end();
-
-    /*
-    ui_window_begin(uiid_gen(), 400, 400, UI_ALIGN_CENTER); // pane: 400, 400
-
-    ui_pane_push(Rect{0, 0, 200, 400});
-
-    {
-      ui_text(uiid_gen(), "Searching...", vec3_one * 0.7f);
-
-      // Force a newline
-      ui_break();
-
-      // Each list item fills up the entire length of the pane
-      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Green Rock");
-      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Blue Rock");
-      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Stew Rock");
-      ui_listItem(uiid_gen(), TEXTURE_rock_icon, "Who Rock");
-    }
-
-    ui_divider(uiid_gen(), UI_ALIGN_RIGHT);
-
-    ui_pane_pop();
-
-    ui_pane_push(Rect{200, 0, 200, 400});
-
-    {
-      // for each item in inventory
-      ui_inventoryItem(uiid_gen(), TEXTURE_rock_icon, true);
-    }
-
-    ui_pane_pop();
-
-    ui_window_end();*/
-
+    // TODO(harrison): refactor this section of the API into a format similar to that above.
     {
       ui_toolbarBegin(uiid_gen());
 
@@ -797,39 +779,10 @@ void gameState_render(GameState *g, RenderMode m) {
 
       ui_toolbarEnd();
     }
-    /*
-
-    {
-      ui_windowBegin(uiid_gen(), 0.7f, 0.7f);
-
-      for (int i = 0; i < INVENTORY_SIZE; i++) {
-        InventorySlot item = g->timeline.info.inventory.hotbar[i];
-
-        uint32 tex = MAX_TEXTURE;
-
-        switch (item.type) {
-          case BLOCK_ROCK:
-            {
-              tex = TEXTURE_rock_icon;
-            } break;
-          case BLOCK_COAL:
-            {
-              tex = TEXTURE_coal_icon;
-            } break;
-        }
-
-        ui_box(uiid_genEx(i),
-            tex,
-            false,
-            item.count);
-      }
-
-      ui_windowEnd();
-    }*/
-
-    ui_end();
 
     ui_draw();
+
+    ui_end();
   }
 }
 

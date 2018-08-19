@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h> // FLT_MAX
 
 #define log(...) fprintf(stderr, __VA_ARGS__)
 #define logln(fmt) fprintf(stderr, fmt "\n")

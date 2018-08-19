@@ -762,6 +762,10 @@ real32 font_getStringWidth(Font f, char* text, real32 scale) {
   return w;
 }
 
+real32 font_getStringHeight(Font f, real32 scale) {
+  return f.pixelHeight * scale;
+}
+
 struct Assets {
   int32 shaderRequests[MAX_SHADER];
   Shader shaders[MAX_SHADER];
