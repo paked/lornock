@@ -2,17 +2,14 @@
 
 a time travelling farming game which takes place on an asteroid.
 
+## Potentially Interesting Files:
+
+- OBJ model and font loader: https://github.com/paked/lornock/blob/master/src/assets.cpp
+- Simple but flexible Immediate Mode GUI implementation: https://github.com/paked/lornock/blob/master/src/ui.cpp
+- Super basic font packer built on stb_truetype: https://github.com/paked/lornock/blob/master/fbake/fbake.cpp
+- Quake style `MemoryArena`s: https://github.com/paked/lornock/blob/master/src/memory.hpp (see in action: https://github.com/paked/lornock/blob/master/src/entities/timeline.cpp)
+
 ## Build Instructions
-
-### Emscripten (web)
-
-1. Install Emscripten somewhere (follow an online guide for that)
-2. Run `source ./emsdk_env.sh`
-3. Return to project dir, `mkdir build && cd build`
-4. `emcmake cmake ..`
-5. `make`
-6. Start a HTTP server with your favourite web server util (eg `python3 -m http.server`)
-7. Open up `localhost:XXXX/game.html` in your browser. Replace XXXX with whatever your port is.
 
 ### Linux
 
