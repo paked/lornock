@@ -2,6 +2,8 @@
 
 a time travelling farming game which takes place on an asteroid.
 
+https://github.com/user-attachments/assets/8f6586db-55ce-4223-8fc6-c9cf8240d9a4
+
 ## Potentially Interesting Files:
 
 - OBJ model and font loader: https://github.com/paked/lornock/blob/master/src/assets.cpp
